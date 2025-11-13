@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: discovery-server
+  config:
+    import: "optional:configserver:"   # URL supplied via env SPRING_CONFIG_IMPORT
