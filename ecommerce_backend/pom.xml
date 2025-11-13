@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- Root coordinates -->
+    <groupId>com.example</groupId>
+    <artifactId>ecommerce</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>ecommerce</name>
+
+    <!-- ✅ Use Spring Boot 3.3.x (compatible with Spring Cloud 2023.0.x) -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.3.5</version>
+        <relativePath/>
+    </parent>
+
+    <properties>
+        <!-- Java version Boot 3.3.x supports 17 and 21 -->
+        <java.version>21</java.version>
+
+        <!-- ✅ Spring Cloud release train compatible with Boot 3.2/3.3 -->
+        <spring-cloud.version>2023.0.3</spring-cloud.version>
+    </properties>
+
+    <!-- ✅ Import ONLY Spring Cloud BOM (Boot BOM comes from parent) -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <modules>
+        <!-- add/keep all your modules here -->
+        <module>platform/config-server</module>
+        <!--
+        <module>platform/discovery-server</module>
+        <module>services/user-service</module>
+        <module>services/product-service</module>
+        ...
+        -->
+    </modules>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <!-- Boot plugin uses the version from the parent -->
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                </plugin>
+
+                <!-- Java 21 compiler setup -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.11.0</version>
+                    <configuration>
+                        <release>${java.version}</release>
+                        <parameters>true</parameters>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+</project>

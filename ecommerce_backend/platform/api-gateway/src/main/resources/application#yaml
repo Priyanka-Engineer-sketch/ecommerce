@@ -1,0 +1,182 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  main:
+    web-application-type: reactive
+  cloud:
+    config:
+      fail-fast: false
+    gateway:
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:5173"
+              - "http://localhost:3000"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - PATCH
+              - DELETE
+              - OPTIONS
+            allowedHeaders:
+              - "*"
+            exposedHeaders:
+              - "X-Correlation-Id"
+            allowCredentials: true
+            maxAge: 3600
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin REPLACE
+        - AddResponseHeader=X-Gateway,api-gateway
+      routes:
+        - id: auth-login-strict
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/auth/login
+            - Method=POST
+          filters:
+            - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 10
+                keyResolver: "#{@ipKeyResolver}"
+            - name: CircuitBreaker
+              args:
+                name: authLoginCB
+                fallbackUri: forward:/fallback/auth
+
+        - id: auth-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 20
+                redis-rate-limiter.burstCapacity: 40
+                keyResolver: "#{@ipKeyResolver}"
+            - name: CircuitBreaker
+              args:
+                name: authCB
+                fallbackUri: forward:/fallback/auth
+
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/api/users/**
+          filters:
+            - StripPrefix=1
+            - name: JwtAuth
+              args:
+                required: true
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 50
+                redis-rate-limiter.burstCapacity: 100
+                keyResolver: "#{@ipKeyResolver}"
+            - name: CircuitBreaker
+              args:
+                name: userCB
+                fallbackUri: forward:/fallback/users
+
+        - id: product-service
+          uri: lb://product-service
+          predicates:
+            - Path=/api/products/**
+          filters:
+            - StripPrefix=1
+            - name: JwtAuth
+              args:
+                required: false
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 100
+                redis-rate-limiter.burstCapacity: 200
+                keyResolver: "#{@ipKeyResolver}"
+            - name: CircuitBreaker
+              args:
+                name: productCB
+                fallbackUri: forward:/fallback/products
+
+        - id: order-service
+          uri: lb://order-service
+          predicates:
+            - Path=/api/orders/**
+          filters:
+            - StripPrefix=1
+            - name: JwtAuth
+              args:
+                required: true
+                roles: ["USER","ADMIN"]
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 30
+                redis-rate-limiter.burstCapacity: 60
+                keyResolver: "#{@ipKeyResolver}"
+            - name: CircuitBreaker
+              args:
+                name: orderCB
+                fallbackUri: forward:/fallback/orders
+
+        - id: recommender-service
+          uri: lb://recommender-service
+          predicates:
+            - Path=/api/reco/**
+          filters:
+            - StripPrefix=1
+            - name: JwtAuth
+              args:
+                required: false
+            - name: CircuitBreaker
+              args:
+                name: recoCB
+                fallbackUri: forward:/fallback/reco
+
+    httpclient:
+      ssl:
+        key-store: ${GATEWAY_SSL_KEYSTORE:}
+        key-store-type: ${GATEWAY_SSL_KEYSTORE_TYPE:PKCS12}
+        key-store-password: ${GATEWAY_SSL_KEY_PASSWORD:}
+        trust-store: ${GATEWAY_SSL_TRUSTSTORE:}
+        trust-store-type: ${GATEWAY_SSL_TRUSTSTORE_TYPE:PKCS12}
+        trust-store-password: ${GATEWAY_SSL_TRUST_PASSWORD:}
+        handshake-timeout: 5000
+        close-notify-flush-timeout: 3000
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      # password: ${REDIS_PASSWORD:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    serviceUrl:
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka}
+  instance:
+    prefer-ip-address: true
+
+# HS256 verification at the gateway
+security:
+  jwt:
+    algorithm: HS256
+    secret: ${JWT_ACCESS_SECRET:change-me-512-bits}
+    issuer: ecomm-user-service
+    audience: ecomm-clients
