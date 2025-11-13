@@ -1,0 +1,7 @@
+spring:
+  main:
+    web-application-type: none
+spring.cloud.config.server:
+  git:
+    uri: file:///${PROJECT_DIR:/tmp}/config-server-test-repo
+    clone-on-start: true
