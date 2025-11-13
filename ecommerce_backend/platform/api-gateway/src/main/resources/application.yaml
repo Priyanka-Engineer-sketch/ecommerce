@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: api-gateway
+  config:
+    import: "optional:configserver:"   # URL supplied via env SPRING_CONFIG_IMPORT
