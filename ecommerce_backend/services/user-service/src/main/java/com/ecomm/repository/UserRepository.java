@@ -37,14 +37,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // Admin search with pagination; optional 'active' filter
 
     @Query("""
-      select u from User u
-      where lower(u.email) like lower(concat('%', :q, '%'))
-         or lower(u.username) like lower(concat('%', :q, '%'))
-         or lower(u.phone) like lower(concat('%', :q, '%'))
-      """)
+            select u from User u
+            where lower(u.email) like lower(concat('%', :q, '%'))
+               or lower(u.username) like lower(concat('%', :q, '%'))
+               or lower(u.phone) like lower(concat('%', :q, '%'))
+            """)
     Page<User> search(@Param("q") String q, Pageable pageable);
 
-// Eagerly fetch roles (and permissions) only when needed for auth
+    // Eagerly fetch roles (and permissions) only when needed for auth
     @EntityGraph(attributePaths = {"roles", "roles.permissions"})
     @Query("select u from User u where lower(u.email) = lower(:email)")
     Optional<User> fetchWithRolesByEmail(@Param("email") String email);
@@ -54,11 +54,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> fetchWithRolesByPhone(@Param("phone") String phone);
 
     @Query("""
-        select distinct u
-        from User u
-        left join fetch u.roles r
-        left join fetch r.permissions
-        where upper(u.email) = upper(:email)
-        """)
+            select distinct u
+            from User u
+            left join fetch u.roles r
+            left join fetch r.permissions
+            where upper(u.email) = upper(:email)
+            """)
     Optional<User> findAuthUserByEmail(@Param("email") String email);
 }

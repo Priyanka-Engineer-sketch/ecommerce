@@ -1,7 +1,3 @@
-# =========================
-# Spring Cloud Config Server (runs on 8888)
-# Common settings (apply to all profiles)
-# =========================
 server:
   port: 8888
 
@@ -13,6 +9,22 @@ spring:
     user:
       name: ${CONFIG_USER:config}
       password: ${CONFIG_PASS:configpass}
+
+  cloud:
+    config:
+      server:
+        # Use Git backend (HTTPS + PAT)
+        git:
+          uri: ${CONFIG_GIT_URI:https://github.com/Priyanka-Engineer-sketch/ecom-config.git}
+          username: ${CONFIG_GIT_USERNAME:}        # can be blank for PAT-only auth
+          password: ${CONFIG_GIT_PASSWORD:}        # GitHub PAT
+          default-label: ${CONFIG_GIT_BRANCH:main} # IMPORTANT: use 'main', not 'master'
+          search-paths: ${CONFIG_GIT_PATHS:}
+          clone-on-start: true
+          skip-ssl-validation: ${CONFIG_GIT_SKIP_SSL:false}
+          timeout: ${CONFIG_GIT_TIMEOUT:20}
+          force-pull: ${CONFIG_GIT_FORCE_PULL:true}
+          delete-untracked-branches: true
 
 encrypt:
   key: ${CONFIG_ENCRYPT_KEY:}   # supply via secret; do NOT commit plaintext
@@ -42,96 +54,3 @@ eureka:
   instance:
     prefer-ip-address: true
 
-# =====================================================================
-# PROFILE: HTTPS + PAT  (Git over HTTPS, GitHub PAT)
-# Activate with:  --spring.profiles.active=https
-# =====================================================================
----
-spring:
-  config:
-    activate:
-      on-profile: https
-  cloud:
-    config:
-      server:
-        # Fallback label if no label is specified in the URL
-        default-label: ${CONFIG_GIT_BRANCH:main}
-        git:
-          uri: ${CONFIG_GIT_URI:https://github.com/Priyanka-Engineer-sketch/ecom-config.git}
-          username: ${CONFIG_GIT_USERNAME:}
-          password: ${CONFIG_GIT_PASSWORD:}        # GitHub PAT
-          default-label: ${CONFIG_GIT_BRANCH:main}
-          search-paths: ${CONFIG_GIT_PATHS:}
-          clone-on-start: true
-          skip-ssl-validation: ${CONFIG_GIT_SKIP_SSL:false}
-          timeout: ${CONFIG_GIT_TIMEOUT:20}
-          force-pull: ${CONFIG_GIT_FORCE_PULL:true}
-          delete-untracked-branches: true
-
-# =====================================================================
-# PROFILE: SSH (INLINE PEM)
-# Activate with:  --spring.profiles.active=ssh-inline
-# =====================================================================
----
-spring:
-  config:
-    activate:
-      on-profile: ssh-inline
-  cloud:
-    config:
-      server:
-        default-label: ${CONFIG_GIT_BRANCH:main}
-        git:
-          uri: ${CONFIG_GIT_URI:git@github.com:Priyanka-Engineer-sketch/ecom-config.git}
-          privateKey: ${CONFIG_GIT_SSH_KEY_PEM:}
-          passphrase: ${CONFIG_GIT_SSH_PASSPHRASE:}
-          ignoreLocalSshSettings: ${CONFIG_GIT_IGNORE_LOCAL_SSH:true}
-          strictHostKeyChecking: ${CONFIG_GIT_STRICT_HOST_KEY:false}
-          hostKey: ${CONFIG_GIT_HOST_KEY:}
-          hostKeyAlgorithm: ${CONFIG_GIT_HOST_KEY_ALGO:}
-          default-label: ${CONFIG_GIT_BRANCH:main}
-          search-paths: ${CONFIG_GIT_PATHS:}
-          clone-on-start: true
-          timeout: ${CONFIG_GIT_TIMEOUT:20}
-          force-pull: ${CONFIG_GIT_FORCE_PULL:true}
-          delete-untracked-branches: true
-
-# =====================================================================
-# PROFILE: SSH (USE ~/.ssh & known_hosts)
-# Activate with:  --spring.profiles.active=ssh-home
-# =====================================================================
----
-spring:
-  config:
-    activate:
-      on-profile: ssh-home
-  cloud:
-    config:
-      server:
-        default-label: ${CONFIG_GIT_BRANCH:main}
-        git:
-          uri: ${CONFIG_GIT_URI:git@github.com:Priyanka-Engineer-sketch/ecom-config.git}
-          ignoreLocalSshSettings: false
-          strictHostKeyChecking: ${CONFIG_GIT_STRICT_HOST_KEY:false}
-          default-label: ${CONFIG_GIT_BRANCH:main}
-          search-paths: ${CONFIG_GIT_PATHS:}
-          clone-on-start: true
-          timeout: ${CONFIG_GIT_TIMEOUT:20}
-          force-pull: ${CONFIG_GIT_FORCE_PULL:true}
-          delete-untracked-branches: true
-
-# =====================================================================
-# PROFILE: Native (local folder backend)
-# Activate with:  --spring.profiles.active=native
-# =====================================================================
----
-spring:
-  config:
-    activate:
-      on-profile: native
-  cloud:
-    config:
-      server:
-        native:
-          search-locations:
-            - ${CONFIG_NATIVE_DIR:./config-repo}

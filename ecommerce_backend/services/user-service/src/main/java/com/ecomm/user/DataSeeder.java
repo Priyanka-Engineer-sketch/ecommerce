@@ -16,7 +16,7 @@ public class DataSeeder implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        List<String> base = List.of("ROLE_USER","ROLE_ADMIN","ROLE_MANAGER");
+        List<String> base = List.of("ROLE_USER", "ROLE_ADMIN", "ROLE_MANAGER");
         base.forEach(r ->
                 roleRepo.findByName(r).orElseGet(() -> roleRepo.save(Role.builder().name(r).description("seed").build()))
         );

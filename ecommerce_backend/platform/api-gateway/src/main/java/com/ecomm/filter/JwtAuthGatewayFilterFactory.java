@@ -156,7 +156,7 @@ public class JwtAuthGatewayFilterFactory extends AbstractGatewayFilterFactory<Jw
     }
 
     // ---------- JWKS verification ----------
-    private enum KeyFamily { RSA, EC }
+    private enum KeyFamily {RSA, EC}
 
     private JWTClaimsSet verifyWithJwks(String token, KeyFamily family) throws Exception {
         if (!notBlank(jwksUri)) throw new IllegalStateException("JWKS URI not configured");

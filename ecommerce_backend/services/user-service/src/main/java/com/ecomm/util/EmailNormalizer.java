@@ -3,7 +3,9 @@ package com.ecomm.util;
 import java.util.Locale;
 
 public final class EmailNormalizer {
-    private EmailNormalizer() {}
+    private EmailNormalizer() {
+    }
+
     public static String canonical(String email) {
         if (email == null) return null;
         String e = email.trim().toLowerCase(Locale.ROOT);

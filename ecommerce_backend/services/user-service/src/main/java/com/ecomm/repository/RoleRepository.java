@@ -13,7 +13,9 @@ import java.util.UUID;
 @Repository
 public interface RoleRepository extends JpaRepository<Role, UUID> {
     Optional<Role> findByName(String name);
+
     boolean existsByName(String name);
+
     @EntityGraph(attributePaths = "permissions")
     @Query("select r from Role r where r.name = :name")
     Optional<Role> findByNameWithPermissions(@Param("name") String name);

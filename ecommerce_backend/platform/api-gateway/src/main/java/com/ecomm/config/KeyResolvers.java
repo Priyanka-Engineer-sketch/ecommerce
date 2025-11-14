@@ -13,7 +13,9 @@ import java.util.Optional;
 @Configuration
 public class KeyResolvers {
 
-    /** Use IP as the default for SCG auto-config. */
+    /**
+     * Use IP as the default for SCG auto-config.
+     */
     @Bean
     @Primary  // <-- this resolves the ambiguity
     public KeyResolver ipKeyResolver() {
@@ -27,7 +29,9 @@ public class KeyResolvers {
         };
     }
 
-    /** Optional: resolve by authenticated principal (if available). */
+    /**
+     * Optional: resolve by authenticated principal (if available).
+     */
     @Bean
     public KeyResolver userKeyResolver() {
         return exchange -> Mono.justOrEmpty(

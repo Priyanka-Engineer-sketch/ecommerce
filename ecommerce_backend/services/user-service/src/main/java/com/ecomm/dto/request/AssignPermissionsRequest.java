@@ -9,7 +9,11 @@ import lombok.Setter;
 
 import java.util.Set;
 
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class AssignPermissionsRequest {
     @NotEmpty
     private Set<String> permissionNames;

@@ -10,13 +10,15 @@ import org.springframework.stereotype.Component;
 public class SecurityEmailListeners {
     private final EmailService email;
 
-    @Async @EventListener
+    @Async
+    @EventListener
     public void onPasswordChanged(SecurityEvents.PasswordChangedEvent e) {
         email.send(e.email(), "Your password was changed",
                 "Hi,\n\nYour password was changed. If this wasn't you, contact support immediately.");
     }
 
-    @Async @EventListener
+    @Async
+    @EventListener
     public void onStatusChanged(SecurityEvents.AccountStatusChangedEvent e) {
         email.send(e.email(), e.active() ? "Account activated" : "Account deactivated",
                 e.active()
@@ -24,7 +26,8 @@ public class SecurityEmailListeners {
                         : "Hi,\n\nYour account has been deactivated. If this wasn't you, contact support.");
     }
 
-    @Async @EventListener
+    @Async
+    @EventListener
     public void onEmailVerification(SecurityEvents.EmailVerificationRequestedEvent e) {
         String link = "https://your-frontend/verify-email?token=" + e.token(); // TODO change to your FE URL
         email.send(e.email(), "Verify your email",

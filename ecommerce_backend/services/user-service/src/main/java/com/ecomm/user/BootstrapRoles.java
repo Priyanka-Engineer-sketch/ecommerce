@@ -11,7 +11,8 @@ import org.springframework.stereotype.Component;
 public class BootstrapRoles implements CommandLineRunner {
     private final RoleRepository roleRepo;
 
-    @Override public void run(String... args) {
+    @Override
+    public void run(String... args) {
         roleRepo.findByName("ROLE_USER").orElseGet(() -> roleRepo.save(Role.builder().name("ROLE_USER").build()));
         roleRepo.findByName("ROLE_ADMIN").orElseGet(() -> roleRepo.save(Role.builder().name("ROLE_ADMIN").build()));
     }

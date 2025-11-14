@@ -15,5 +15,5 @@ import lombok.Setter;
 @Builder
 public class AssignRolesRequest {
     @NotEmpty
-    private java.util.Set<@Pattern(regexp="ROLE_[A-Z_]+") String> roles;
+    private java.util.Set<@Pattern(regexp = "ROLE_[A-Z_]+") String> roles;
 }

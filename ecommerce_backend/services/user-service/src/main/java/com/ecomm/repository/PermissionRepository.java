@@ -12,6 +12,7 @@ import java.util.Optional;
 public interface PermissionRepository extends JpaRepository<Permission, Long> {
 
     Optional<Permission> findByNameIgnoreCase(String name);
+
     boolean existsByNameIgnoreCase(String name);
 
     Page<Permission> findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCase(

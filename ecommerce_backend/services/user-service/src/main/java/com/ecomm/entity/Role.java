@@ -27,8 +27,11 @@ import java.util.Set;
 
 @Entity
 @Table(name = "roles", uniqueConstraints = @UniqueConstraint(columnNames = "name"))
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @ToString(onlyExplicitlyIncluded = true)
 public class Role {
@@ -46,7 +49,7 @@ public class Role {
     private String description;
 
     @ManyToMany(fetch = FetchType.LAZY,
-            cascade = { CascadeType.PERSIST, CascadeType.MERGE })
+            cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(name = "roles_permissions",
             joinColumns = @JoinColumn(name = "role_id"),
             inverseJoinColumns = @JoinColumn(name = "permission_id"))
@@ -73,7 +76,8 @@ public class Role {
     }
 
     // Ensure consistent ROLE_ prefix and uppercase
-    @PrePersist @PreUpdate
+    @PrePersist
+    @PreUpdate
     private void normalize() {
         if (name != null) {
             name = name.trim().toUpperCase();
