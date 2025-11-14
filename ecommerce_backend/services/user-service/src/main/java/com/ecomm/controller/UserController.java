@@ -1,19 +1,23 @@
 package com.ecomm.controller;
 
+import com.ecomm.dto.TokenRefreshRequest;
 import com.ecomm.dto.request.LoginRequest;
 import com.ecomm.dto.request.ProfileUpdateRequest;
 import com.ecomm.dto.request.RegisterRequest;
-import com.ecomm.dto.TokenRefreshRequest;
 import com.ecomm.dto.response.AuthResponse;
-import com.ecomm.dto.response.MeResponse;
 import com.ecomm.dto.response.UserProfileResponse;
 import com.ecomm.service.AuthService;
 import com.ecomm.service.UserService;
-
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/users")

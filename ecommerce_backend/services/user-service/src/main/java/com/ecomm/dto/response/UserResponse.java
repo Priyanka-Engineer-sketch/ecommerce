@@ -1,6 +1,5 @@
 package com.ecomm.dto.response;
 
-import com.ecomm.entity.Permission;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
