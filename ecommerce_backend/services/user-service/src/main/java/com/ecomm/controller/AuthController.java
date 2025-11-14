@@ -1,12 +1,13 @@
 package com.ecomm.controller;
 
 
-import com.ecomm.entity.domain.EmailVerificationToken;
 import com.ecomm.dto.request.LoginRequest;
 import com.ecomm.dto.request.RegisterRequest;
 import com.ecomm.dto.response.AuthResponse;
+import com.ecomm.dto.response.MeResponse;
 import com.ecomm.dto.response.UserResponse;
 import com.ecomm.entity.User;
+import com.ecomm.entity.domain.EmailVerificationToken;
 import com.ecomm.notification.SecurityEvents;
 import com.ecomm.repository.EmailVerificationTokenRepository;
 import com.ecomm.repository.UserRepository;
@@ -19,8 +20,12 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
-import com.ecomm.dto.response.MeResponse;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Duration;
 import java.time.Instant;

@@ -1,11 +1,11 @@
 package com.ecomm.service.impl;
 
 import com.ecomm.config.security.util.SecurityUtils;
-import com.ecomm.entity.domain.EmailVerificationToken;
 import com.ecomm.dto.request.ChangePasswordRequest;
 import com.ecomm.dto.request.SelfUpdateRequest;
 import com.ecomm.dto.response.UserResponse;
 import com.ecomm.entity.User;
+import com.ecomm.entity.domain.EmailVerificationToken;
 import com.ecomm.notification.SecurityEvents.AccountStatusChangedEvent;
 import com.ecomm.notification.SecurityEvents.EmailVerificationRequestedEvent;
 import com.ecomm.notification.SecurityEvents.PasswordChangedEvent;
@@ -17,8 +17,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

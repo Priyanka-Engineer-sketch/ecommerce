@@ -1,7 +1,6 @@
 package com.ecomm.config.security;
 
 import com.ecomm.entity.Role;
-import com.ecomm.entity.User;
 import com.ecomm.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
