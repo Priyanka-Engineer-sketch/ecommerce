@@ -10,10 +10,16 @@ import org.springframework.data.domain.Pageable;
 
 public interface UserAdminService {
     UserResponse create(AdminCreateUserRequest req);
+
     UserResponse update(Long id, UpdateUserRequest req);
+
     void delete(Long id);
+
     UserResponse get(Long id);
+
     PageResponse<UserResponse> list(String query, Pageable pageable);
+
     UserResponse assignRoles(Long id, AssignRolesRequest req);
+
     UserResponse patchStatus(Long id, StatusPatchRequest req);
 }

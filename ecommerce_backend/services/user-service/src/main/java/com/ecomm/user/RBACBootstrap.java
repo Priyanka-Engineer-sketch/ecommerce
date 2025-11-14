@@ -25,7 +25,8 @@ public class RBACBootstrap implements ApplicationRunner {
         seedRbac();
     }
 
-    @Transactional // explicit is fine; keeps seeding atomic
+    @Transactional
+        // explicit is fine; keeps seeding atomic
     void seedRbac() {
         seed("ROLE_ADMIN", Set.of(
                 "USER_READ", "USER_WRITE",

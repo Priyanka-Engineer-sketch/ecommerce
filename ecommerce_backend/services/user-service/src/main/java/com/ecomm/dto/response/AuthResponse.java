@@ -9,10 +9,11 @@ public record AuthResponse(
         String accessToken,
         String refreshToken,
         String tokenType,
-        long   expiresIn,
-        Long   userId,
+        long expiresIn,
+        Long userId,
         String email,
         String username,
         Set<String> roles,
         Set<String> permissions
-) {}
+) {
+}

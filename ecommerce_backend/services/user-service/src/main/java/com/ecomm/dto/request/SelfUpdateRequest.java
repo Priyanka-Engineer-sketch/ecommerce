@@ -16,9 +16,12 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class SelfUpdateRequest {
-    @Size(min=3, max=50) private String username;
+    @Size(min = 3, max = 50)
+    private String username;
     // allow email change only if you support re-verification; otherwise omit
-    @Email private String email;
-    @Pattern(regexp="^$|^[0-9+\\-() ]{7,20}$") private String phone;
+    @Email
+    private String email;
+    @Pattern(regexp = "^$|^[0-9+\\-() ]{7,20}$")
+    private String phone;
 }
 

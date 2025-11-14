@@ -6,7 +6,10 @@ import com.ecomm.dto.response.UserResponse;
 
 public interface UserSelfService {
     UserResponse getCurrentUser();
+
     UserResponse updateCurrentUser(SelfUpdateRequest req);
+
     void changePassword(ChangePasswordRequest req);
+
     UserResponse patchStatus(boolean active);
 }

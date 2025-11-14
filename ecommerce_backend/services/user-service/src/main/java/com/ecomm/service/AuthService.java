@@ -7,7 +7,10 @@ import com.ecomm.dto.response.UserResponse;
 
 public interface AuthService {
     UserResponse registerUser(RegisterRequest req);
+
     AuthResponse register(RegisterRequest req);
+
     AuthResponse login(LoginRequest req);
+
     AuthResponse refresh(String refreshToken);
 }

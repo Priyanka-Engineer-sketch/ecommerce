@@ -87,6 +87,7 @@ public class AuthController {
     public UserResponse registerUser(@Valid @RequestBody RegisterRequest req) {
         return authService.registerUser(req);
     }
+
     @GetMapping("/verify-email")
     public String verifyEmail(@RequestParam String token) {
         var ev = tokenRepo.findByTokenAndConsumedFalse(token)

@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Simple per-instance (in-memory) token-bucket rate limiter using Bucket4j.
  * Key: X-User-Id if present, else client IP. Suitable for POC/single-node.
- *
+ * <p>
  * Filter name in application.yml:  "Bucket4jRateLimiter"
  */
 @Component
@@ -60,9 +60,9 @@ public class Bucket4jRateLimiterGatewayFilterFactory
         if (s == null || s.isBlank()) return Duration.ofSeconds(1);
         s = s.trim().toLowerCase();
         if (s.endsWith("ms")) return Duration.ofMillis(Long.parseLong(s.replace("ms", "")));
-        if (s.endsWith("s"))  return Duration.ofSeconds(Long.parseLong(s.replace("s", "")));
-        if (s.endsWith("m"))  return Duration.ofMinutes(Long.parseLong(s.replace("m", "")));
-        if (s.endsWith("h"))  return Duration.ofHours(Long.parseLong(s.replace("h", "")));
+        if (s.endsWith("s")) return Duration.ofSeconds(Long.parseLong(s.replace("s", "")));
+        if (s.endsWith("m")) return Duration.ofMinutes(Long.parseLong(s.replace("m", "")));
+        if (s.endsWith("h")) return Duration.ofHours(Long.parseLong(s.replace("h", "")));
         return Duration.parse(s); // fallback ISO-8601
     }
 
@@ -77,11 +77,17 @@ public class Bucket4jRateLimiterGatewayFilterFactory
 
     @Data
     public static class Config {
-        /** Max tokens in bucket (burst). */
+        /**
+         * Max tokens in bucket (burst).
+         */
         private long capacity = 50;
-        /** Tokens added per period. */
+        /**
+         * Tokens added per period.
+         */
         private long refillTokens = 50;
-        /** Period: e.g., 1s, 500ms, 1m, 1h (or ISO-8601). */
+        /**
+         * Period: e.g., 1s, 500ms, 1m, 1h (or ISO-8601).
+         */
         private String refillPeriod = "1s";
     }
 }

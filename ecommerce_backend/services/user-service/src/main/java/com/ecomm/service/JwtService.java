@@ -4,6 +4,7 @@ import com.ecomm.entity.User;
 
 public interface JwtService {
     String generateAccessToken(User user);
+
     String generateRefreshToken(User user);
 
     // For existing code that used a single-arg method
@@ -13,7 +14,10 @@ public interface JwtService {
     boolean validateToken(String token, boolean refresh);
 
     String extractUsername(String token);
+
     String extractJti(String token);
+
     Integer extractTokenVersion(String token);
+
     Long extractExpiryEpochSeconds(String token);
 }

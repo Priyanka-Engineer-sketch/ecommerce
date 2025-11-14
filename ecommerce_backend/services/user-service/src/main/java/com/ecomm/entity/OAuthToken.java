@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 import java.time.Instant;
 
 @Entity
-@Table(name="oauth_tokens")
+@Table(name = "oauth_tokens")
 @Data
 @Builder
 @NoArgsConstructor
@@ -31,6 +31,6 @@ public class OAuthToken {
     private Instant expiresAt;
 
     @ManyToOne
-    @JoinColumn(name="user_id")
+    @JoinColumn(name = "user_id")
     private User user;
 }

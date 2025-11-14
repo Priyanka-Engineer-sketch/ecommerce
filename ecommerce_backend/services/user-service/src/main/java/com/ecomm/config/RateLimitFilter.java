@@ -18,9 +18,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class RateLimitFilter extends OncePerRequestFilter {
 
     private static final Map<String, Bandwidth> RULES = Map.of(
-            "/api/auth/login",    Bandwidth.simple(10, Duration.ofMinutes(1)),
-            "/api/auth/register", Bandwidth.simple(5,  Duration.ofMinutes(1)),
-            "/api/auth/refresh",  Bandwidth.simple(20, Duration.ofMinutes(1)),
+            "/api/auth/login", Bandwidth.simple(10, Duration.ofMinutes(1)),
+            "/api/auth/register", Bandwidth.simple(5, Duration.ofMinutes(1)),
+            "/api/auth/refresh", Bandwidth.simple(20, Duration.ofMinutes(1)),
             "/api/users/me/password", Bandwidth.simple(5, Duration.ofMinutes(1))
     );
 

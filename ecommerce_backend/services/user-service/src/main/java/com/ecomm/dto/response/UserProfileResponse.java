@@ -12,4 +12,5 @@ public record UserProfileResponse(
         String city,
         String country,
         String postalCode
-) {}
+) {
+}

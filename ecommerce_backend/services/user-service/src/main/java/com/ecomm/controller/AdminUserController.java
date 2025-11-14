@@ -33,7 +33,9 @@ public class AdminUserController {
     private final UserAdminService service;
 
     @PostMapping
-    public UserResponse create(@Valid @RequestBody AdminCreateUserRequest req) { return service.create(req); }
+    public UserResponse create(@Valid @RequestBody AdminCreateUserRequest req) {
+        return service.create(req);
+    }
 
     @PutMapping("/{id}")
     public UserResponse update(@PathVariable Long id, @Valid @RequestBody UpdateUserRequest req) {
@@ -41,10 +43,14 @@ public class AdminUserController {
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) { service.delete(id); }
+    public void delete(@PathVariable Long id) {
+        service.delete(id);
+    }
 
     @GetMapping("/{id}")
-    public UserResponse get(@PathVariable Long id) { return service.get(id); }
+    public UserResponse get(@PathVariable Long id) {
+        return service.get(id);
+    }
 
     @GetMapping
     public PageResponse<UserResponse> list(

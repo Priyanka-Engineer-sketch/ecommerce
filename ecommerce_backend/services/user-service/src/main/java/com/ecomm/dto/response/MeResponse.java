@@ -13,4 +13,5 @@ public record MeResponse(
         Boolean isActive,
         Set<String> roles,
         Set<String> permissions
-) {}
+) {
+}

@@ -29,7 +29,8 @@ import java.util.Set;
 @AllArgsConstructor
 @Builder
 public class Permission {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false, unique = true, length = 100)
@@ -39,6 +40,7 @@ public class Permission {
 
     @ManyToMany(mappedBy = "permissions", fetch = FetchType.LAZY)
     @Builder.Default
-    @ToString.Exclude @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Set<Role> roles = new HashSet<>();
 }

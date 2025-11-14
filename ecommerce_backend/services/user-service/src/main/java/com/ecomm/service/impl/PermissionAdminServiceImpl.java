@@ -76,7 +76,8 @@ public class PermissionAdminServiceImpl implements PermissionAdminService {
         permissionRepo.delete(p);
     }
 
-    @Override @Transactional(readOnly = true)
+    @Override
+    @Transactional(readOnly = true)
     @Cacheable(value = "permissions", key = "#id")
     public PermissionResponse get(Long id) {
         return permissionRepo.findById(id)
@@ -84,7 +85,8 @@ public class PermissionAdminServiceImpl implements PermissionAdminService {
                 .orElseThrow(() -> new NoSuchElementException("Permission not found"));
     }
 
-    @Override @Transactional(readOnly = true)
+    @Override
+    @Transactional(readOnly = true)
     @Cacheable(value = "permissionsList", key = "{#q, #pageable.pageNumber, #pageable.pageSize}")
     public PageResponse<PermissionResponse> list(String q, Pageable pageable) {
         Page<Permission> page = (q == null || q.isBlank())

@@ -8,9 +8,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class CreatePermissionRequest {
-    @NotBlank @Size(max = 100)
+    @NotBlank
+    @Size(max = 100)
     private String name;
 
     @Size(max = 255)
