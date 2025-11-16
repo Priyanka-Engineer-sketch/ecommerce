@@ -2,9 +2,11 @@
 <project version="4">
   <component name="Encoding">
     <file url="file://$PROJECT_DIR$/config-server/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/ecommerce_backend/common/saga-kafka-lib/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/ecommerce_backend/platform/api-gateway/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/ecommerce_backend/platform/config-server/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/ecommerce_backend/platform/discovery-server/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/ecommerce_backend/services/order-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/ecommerce_backend/services/user-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/ecommerce_backend/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/ecommerce_backend/src/main/resources" charset="UTF-8" />

@@ -10,6 +10,12 @@
     <version>0.0.1-POC-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>ecommerce</name>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+    </dependencies>
 
     <!-- ✅ Use Spring Boot 3.3.x (compatible with Spring Cloud 2023.0.x) -->
     <parent>
@@ -46,6 +52,7 @@
         <module>platform/config-server</module>
         <module>platform/discovery-server</module>
         <module>services/user-service</module>
+        <module>common/saga-kafka-lib</module>
     </modules>
 
     <build>

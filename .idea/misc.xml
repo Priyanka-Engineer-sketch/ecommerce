@@ -10,6 +10,9 @@
         <option value="$PROJECT_DIR$/ecommerce_backend/platform/api-gateway/pom.xml" />
         <option value="$PROJECT_DIR$/ecommerce_backend/platform/discovery-server/pom.xml" />
         <option value="$PROJECT_DIR$/ecommerce_backend/pom.xml" />
+        <option value="$PROJECT_DIR$/ecommerce_backend/common/demo/pom.xml" />
+        <option value="$PROJECT_DIR$/ecommerce_backend/common/saga-kafka-lib/pom.xml" />
+        <option value="$PROJECT_DIR$/ecommerce_backend/services/order-service/pom.xml" />
       </list>
     </option>
   </component>

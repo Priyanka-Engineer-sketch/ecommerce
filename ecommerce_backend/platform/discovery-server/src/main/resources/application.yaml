@@ -1,7 +1,5 @@
 spring:
   application:
-    name: user-service
-  profiles:
-    active: dev
+    name: discovery-server
   config:
     import: "optional:configserver:"   # URL supplied via env SPRING_CONFIG_IMPORT
