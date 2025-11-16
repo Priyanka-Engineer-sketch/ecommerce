@@ -9,6 +9,8 @@
         <outputRelativeToContentRoot value="true" />
         <module name="config-server" />
         <module name="discovery-server" />
+        <module name="order-service" />
+        <module name="saga-kafka-lib" />
       </profile>
       <profile name="Annotation profile for ecommerce" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
@@ -28,6 +30,8 @@
       <module name="api-gateway" options="-parameters" />
       <module name="config-server" options="-parameters" />
       <module name="discovery-server" options="-parameters" />
+      <module name="order-service" options="-parameters" />
+      <module name="saga-kafka-lib" options="-parameters" />
       <module name="user-service" options="-parameters" />
     </option>
   </component>
