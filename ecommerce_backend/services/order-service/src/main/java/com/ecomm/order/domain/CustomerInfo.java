@@ -3,11 +3,11 @@ package com.ecomm.order.domain;
 import jakarta.persistence.Embeddable;
 import lombok.*;
 
-@Embeddable
-@Getter @Setter
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@Embeddable
 public class CustomerInfo {
     private String customerId;
     private String name;

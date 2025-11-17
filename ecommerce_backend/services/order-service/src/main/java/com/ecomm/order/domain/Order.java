@@ -7,12 +7,12 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
-@Entity
-@Table(name = "orders")
-@Getter @Setter
+
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@Entity
 public class Order {
 
     @Id
