@@ -5,10 +5,10 @@ import lombok.*;
 
 @Entity
 @Table(name = "order_items")
-@Getter @Setter
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class OrderItem {
 
     @Id
