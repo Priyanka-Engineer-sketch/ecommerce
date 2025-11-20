@@ -28,7 +28,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest req) {
-        if ("OPTIONS".equalsIgnoreCase(req.getMethod())) return true; // CORS preflight
+        if ("OPTIONS".equalsIgnoreCase(req.getMethod())) return true;
         String p = req.getRequestURI();
         return RULES.keySet().stream().noneMatch(p::startsWith);
     }
@@ -57,3 +57,4 @@ public class RateLimitFilter extends OncePerRequestFilter {
         }
     }
 }
+

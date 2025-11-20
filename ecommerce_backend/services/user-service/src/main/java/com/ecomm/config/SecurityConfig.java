@@ -1,8 +1,9 @@
-package com.ecomm.config.security;
+package com.ecomm.config;
 
-import com.ecomm.config.RateLimitFilter;
+import com.ecomm.config.security.JwtAuthFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -11,6 +12,7 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,27 +21,21 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 import java.io.IOException;
 
-
 @Configuration
 @EnableMethodSecurity
 @RequiredArgsConstructor
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
     private final RateLimitFilter rateLimitFilter;
 
-
-    // Public endpoints that anyone can hit
     private static final String[] PUBLIC = {
-            // user auth endpoints
             "/api/users/register",
             "/api/users/login",
-            "/api/users/{userId}/profile",
             "/api/users/refresh",
             "/api/users/verify-email",
             "/api/users/resend-verification",
-
-            // oauth + docs + health
             "/oauth2/**",
             "/login/oauth2/**",
             "/v3/api-docs/**",
@@ -47,32 +43,29 @@ public class SecurityConfig {
             "/swagger-ui.html",
             "/actuator/health",
             "/actuator/info",
-
             "/api/auth/**"
     };
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
+                .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
-                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(sm ->
+                        sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint((req, res, e) -> writeJson(res, 401, "Unauthorized Access"))
-                        .accessDeniedHandler((req, res, e) -> writeJson(res, 403, "Access Denied"))
+                        .authenticationEntryPoint((req, res, e) ->
+                                writeJson(res, HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized Access"))
+                        .accessDeniedHandler((req, res, e) ->
+                                writeJson(res, HttpServletResponse.SC_FORBIDDEN, "Access Denied"))
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC).permitAll()
                         .requestMatchers(HttpMethod.GET, "/actuator/**").permitAll()
-
-                        // user self endpoints
                         .requestMatchers("/api/users/me", "/api/users/me/**").authenticated()
-
-                        // admin zones
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
-
-                        // everything else
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
@@ -87,7 +80,6 @@ public class SecurityConfig {
         String body = String.format("{\"status\":%d,\"error\":\"%s\"}", status, message);
         res.getWriter().write(body);
     }
-
 
     @Bean
     public PasswordEncoder passwordEncoder() {
