@@ -30,20 +30,31 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     private final RateLimitFilter rateLimitFilter;
 
+    // PUBLIC only truly public endpoints (no token needed)
     private static final String[] PUBLIC = {
+            // user auth
             "/api/users/register",
             "/api/users/login",
             "/api/users/refresh",
             "/api/users/verify-email",
             "/api/users/resend-verification",
+
+            // auth-controller public endpoints
+            "/api/auth/login",
+            "/api/auth/register",
+            "/api/auth/verify-email",
+            "/api/auth/resend-verification",
+
+            // OAuth2 callbacks
             "/oauth2/**",
             "/login/oauth2/**",
+
+            // Docs & health/info
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html",
             "/actuator/health",
-            "/actuator/info",
-            "/api/auth/**"
+            "/actuator/info"
     };
 
     @Bean
@@ -61,11 +72,20 @@ public class SecurityConfig {
                                 writeJson(res, HttpServletResponse.SC_FORBIDDEN, "Access Denied"))
                 )
                 .authorizeHttpRequests(auth -> auth
+                        // 1) Fully public
                         .requestMatchers(PUBLIC).permitAll()
                         .requestMatchers(HttpMethod.GET, "/actuator/**").permitAll()
+
+                        // 2) Authenticated user endpoints
+                        .requestMatchers("/api/auth/me").authenticated()
                         .requestMatchers("/api/users/me", "/api/users/me/**").authenticated()
+
+                        // 3) Admin-only endpoints
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        // (optional) any other /api/users/** that is not /me can be admin-only:
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
+
+                        // 4) everything else needs authentication
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
