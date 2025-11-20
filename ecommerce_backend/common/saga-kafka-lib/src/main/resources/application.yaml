@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: order-saga-orchestrator
+  config:
+    import: "optional:configserver:"
