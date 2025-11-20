@@ -37,7 +37,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String header = req.getHeader(HttpHeaders.AUTHORIZATION);
 
-        // ---- No token? Let it pass to next filters (like public endpoints)
         if (header == null || !header.startsWith("Bearer ")) {
             chain.doFilter(req, res);
             return;
@@ -45,7 +44,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String token = header.substring(7);
 
-        // ---- Validate JWT signature/expiry
         if (!jwtService.validate(token)) {
             log.debug("Invalid JWT: {}", token);
             SecurityContextHolder.clearContext();
@@ -86,3 +84,4 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         chain.doFilter(req, res);
     }
 }
+
