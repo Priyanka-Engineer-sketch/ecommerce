@@ -1,5 +1,6 @@
 package com.ecomm.controller;
 
+import com.ecomm.dto.TokenRefreshRequest;
 import com.ecomm.dto.request.*;
 import com.ecomm.dto.response.AuthResponse;
 import com.ecomm.dto.response.MeResponse;
@@ -41,7 +42,7 @@ public class AuthController {
     private final EmailVerificationTokenRepository tokenRepo;
     private final ApplicationEventPublisher events;
 
-    private final PasswordResetService passwordResetService; // (currently not used directly, ok)
+    private final PasswordResetService passwordResetService;
     private final TwoFactorAuthService twoFactorAuthService;
     private final FraudOtpService fraudOtpService;
     private final OtpService otpService;
@@ -58,6 +59,13 @@ public class AuthController {
     @PostMapping("/registerUserByAdmin")
     public UserResponse registerUser(@Valid @RequestBody RegisterRequest req) {
         return authService.registerUser(req);
+    }
+
+    // ---------------- REFRESH TOKEN (PUBLIC) ----------------
+
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody TokenRefreshRequest req) {
+        return ResponseEntity.ok(authService.refresh(req.getRefreshToken()));
     }
 
     // ---------------- CURRENT USER ----------------
@@ -168,7 +176,6 @@ public class AuthController {
     @PostMapping("/reset-password")
     public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequest req) {
 
-        // validate OTP for PASSWORD_RESET purpose
         otpService.validateOtp(req.email(), req.otp(), "PASSWORD_RESET");
 
         User user = userRepository.findByEmailIgnoreCase(req.email())
@@ -184,13 +191,13 @@ public class AuthController {
 
     // ---------------- FRAUD LOGIN OTP ----------------
 
-    // Fraud verification – verify OTP and issue tokens
     @PostMapping("/login-fraud/verify")
     public ResponseEntity<AuthResponse> verifyFraudOtp(@Valid @RequestBody FraudOtpVerifyRequest req) {
-        return ResponseEntity.ok(fraudOtpService.verifyFraudOtp(req.email(), req.otp()));
+        fraudOtpService.validateFraudOtp(req.email(), req.otp());
+        AuthResponse response = authService.issueTokensForUser(req.email());
+        return ResponseEntity.ok(response);
     }
 
-    // Alternative fraud verify using generic OtpService
     @PostMapping("/login/fraud-verify")
     public ResponseEntity<AuthResponse> fraudVerify(@Valid @RequestBody FraudOtpRequest req) {
         otpService.validateOtp(req.email(), req.otp(), "FRAUD_VERIFY");

@@ -7,7 +7,5 @@ public interface FraudOtpService {
 
     void createFraudOtpForLogin(User user, String ip, String userAgent);
 
-    AuthResponse verifyFraudOtp(String email, String otpCode);
-
     void validateFraudOtp(String email, String otp);
 }

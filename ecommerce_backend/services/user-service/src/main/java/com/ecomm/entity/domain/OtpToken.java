@@ -43,5 +43,8 @@ public class OtpToken {
     @Column(nullable = false)
     private boolean used = false;
 
+    @Column(nullable = false)
+    private boolean consumed = false;
+
     private Instant createdAt;
 }

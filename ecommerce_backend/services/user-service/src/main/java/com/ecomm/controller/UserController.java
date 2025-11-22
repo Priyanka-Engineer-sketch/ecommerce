@@ -28,31 +28,31 @@ public class UserController {
     private final AuthService authService;
     private final UserService userService; // or private final UserProfileService userService;
 
-    // Register (public)
-    @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
-        return ResponseEntity.ok(authService.register(request));
-    }
-
-//    // Login (public)
-//    @PostMapping("/login")
-//    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-//        return ResponseEntity.ok(authService.login(request));
+//    // Register (public)
+//    @PostMapping("/register")
+//    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
+//        return ResponseEntity.ok(authService.register(request));
 //    }
-
-    @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest req,
-                                              HttpServletRequest httpReq) {
-        String ip = httpReq.getRemoteAddr();
-        String agent = httpReq.getHeader("User-Agent");
-        return ResponseEntity.ok(authService.login(req, ip, agent));
-    }
-
-    // Refresh (public)
-    @PostMapping("/refresh")
-    public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody TokenRefreshRequest req) {
-        return ResponseEntity.ok(authService.refresh(req.getRefreshToken()));
-    }
+//
+////    // Login (public)
+////    @PostMapping("/login")
+////    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+////        return ResponseEntity.ok(authService.login(request));
+////    }
+//
+//    @PostMapping("/login")
+//    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest req,
+//                                              HttpServletRequest httpReq) {
+//        String ip = httpReq.getRemoteAddr();
+//        String agent = httpReq.getHeader("User-Agent");
+//        return ResponseEntity.ok(authService.login(req, ip, agent));
+//    }
+//
+//    // Refresh (public)
+//    @PostMapping("/refresh")
+//    public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody TokenRefreshRequest req) {
+//        return ResponseEntity.ok(authService.refresh(req.getRefreshToken()));
+//    }
 
     // Get profile (JWT protected)
     @GetMapping("/{userId}/profile")

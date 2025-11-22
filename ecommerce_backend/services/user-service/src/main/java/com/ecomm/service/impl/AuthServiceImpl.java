@@ -8,14 +8,17 @@ import com.ecomm.dto.response.AuthResponse;
 import com.ecomm.dto.response.UserResponse;
 import com.ecomm.entity.Role;
 import com.ecomm.entity.User;
+import com.ecomm.entity.UserProfile;
 import com.ecomm.entity.domain.fraud.FraudRiskLevel;
 import com.ecomm.entity.domain.fraud.FraudScoreService;
 import com.ecomm.exception.UserAlreadyExistsException;
 import com.ecomm.notification.EmailService;
 import com.ecomm.repository.RoleRepository;
+import com.ecomm.repository.UserProfileRepository;
 import com.ecomm.repository.UserRepository;
 import com.ecomm.saga.kafka.UserEventProducer;
 import com.ecomm.securitycommon.SecurityFlags;
+import com.ecomm.service.AsyncLoginSideEffects;
 import com.ecomm.service.AuthService;
 import com.ecomm.service.FraudOtpService;
 import com.ecomm.service.OtpService;          // <-- use interface, not impl
@@ -28,6 +31,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -41,12 +45,13 @@ import java.util.stream.Stream;
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
+    private final UserProfileRepository userProfileRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager; // ok if unused
     private final SecurityFlags flags;
-    private final EmailService emailService;
+    private final AsyncLoginSideEffects asyncLoginSideEffects;
 
     // fraud / risk / kafka / otp
     private final FraudScoreService fraudScoreService;
@@ -62,6 +67,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @CacheEvict(value = "usersByEmail", key = "#req.email")
+    @Transactional
     public AuthResponse register(RegisterRequest req) {
         if (userRepository.existsByEmailIgnoreCase(req.getEmail())) {
             throw new UserAlreadyExistsException("Email already registered");
@@ -69,7 +75,10 @@ public class AuthServiceImpl implements AuthService {
 
         Role userRole = roleRepository.findByName("ROLE_USER")
                 .orElseGet(() -> roleRepository.save(
-                        Role.builder().name("ROLE_USER").description("Standard user").build()
+                        Role.builder()
+                                .name("ROLE_USER")
+                                .description("Standard user")
+                                .build()
                 ));
 
         User u = new User();
@@ -77,14 +86,28 @@ public class AuthServiceImpl implements AuthService {
         u.setUsername(req.getUsername());
         u.setPasswordHash(passwordEncoder.encode(req.getPassword()));
         u.setIsActive(true);
-        u.setIsEmailVerified(flags.autoVerifyOnRegister); // true in tests/dev
+        u.setIsEmailVerified(flags.autoVerifyOnRegister);
         u.setTokenVersion(0);
         u.setRoles(new HashSet<>(List.of(userRole)));
 
+        Instant now = Instant.now();
+
+        UserProfile profile = UserProfile.builder()        // if present
+                .displayName(req.getUsername())          // or full name
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+
+        // set both sides of the association
+        profile.setUser(u);
+        u.setProfile(profile);
+
+        // save only the owner; cascade will save profile
         User saved = userRepository.save(u);
-        // you can also send welcome email + kafka event here if you want
+
         return buildTokens(saved);
     }
+
 
     @Override
     @CacheEvict(value = "usersByEmail", key = "#req.email")
@@ -115,7 +138,7 @@ public class AuthServiceImpl implements AuthService {
     // ------------------------------------------------------------------------
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public AuthResponse login(LoginRequest req, String ip, String userAgent) {
         User u = userRepository.findByEmailIgnoreCase(req.email())
                 .orElseThrow(() -> new RuntimeException("Invalid email or password"));
@@ -124,25 +147,26 @@ public class AuthServiceImpl implements AuthService {
             throw new RuntimeException("Invalid email or password");
         }
 
-        // 1) AI-style fraud scoring (HIGH -> hard block + fraud OTP)
+        // 1) AI-style fraud scoring
         FraudRiskLevel risk = fraudScoreService.evaluateLoginRisk(u, ip, userAgent);
         if (risk == FraudRiskLevel.HIGH) {
-            // Do NOT issue tokens. Require special fraud verification OTP.
+            // this might still need to be sync, but make sure it's fast
             fraudOtpService.createFraudOtpForLogin(u, ip, userAgent);
-            throw new RuntimeException(
-                    "High risk login detected. Verification code sent to your email.");
+
+            // SIDE EFFECTS: send mail/alert async
+            asyncLoginSideEffects.handleHighRiskLogin(u, ip, userAgent);
+
+            throw new RuntimeException("High risk login detected. Verification code sent to your email.");
         }
 
-        // 2) Lightweight heuristic risk engine (e.g. device/ip anomalies)
+        // 2) Lightweight heuristic risk engine
         int riskScore = riskEngine.calculateRisk(u.getEmail(), ip, userAgent);
-        int riskCounter = riskEngine.calculateRisk(u.getEmail(), ip, userAgent);
+        int riskCounter = riskScore;
 
         if (riskCounter >= 60) {
-            otpService.sendOtp(u.getEmail(), "FRAUD_VERIFY");
-            userEventProducer.sendFraudAlert(u, riskCounter,"FRAUD_VERIFY");
-            auditService.log(u, "LOGIN_SUSPICIOUS",
-                    "RiskScore=" + riskCounter,
-                    ip, userAgent);
+            // send OTP + Kafka ASYNC
+            asyncLoginSideEffects.handleSuspiciousLogin(u, riskCounter, ip, userAgent);
+
             return AuthResponse.builder()
                     .requires2FA(true)
                     .message("Suspicious login detected")
@@ -150,14 +174,12 @@ public class AuthServiceImpl implements AuthService {
                     .build();
         }
 
-        // 3) Normal login: send notifications + kafka, then issue tokens
-        emailService.sendLoginNotification(u, ip, userAgent);
-        userEventProducer.sendLoginEvent(u, ip, userAgent,riskScore);
-        auditService.log(u, "LOGIN_SUCCESS",
-                "RiskScore=" + riskCounter,
-                ip, userAgent);
+        // 3) Normal login: build tokens first, side effects async
+        AuthResponse tokens = buildTokens(u);
 
-        return buildTokens(u);
+        asyncLoginSideEffects.handleSuccessfulLogin(u, riskCounter, riskScore, ip, userAgent);
+
+        return tokens;
     }
 
     // ------------------------------------------------------------------------

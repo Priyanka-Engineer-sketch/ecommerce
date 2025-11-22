@@ -35,12 +35,15 @@ public class EmailService {
     // Load HTML template file (used for welcome/verify/alerts)
     // -------------------------------------------------
     private String loadTemplate(String filename) {
+        String path = templatePrefix + filename;
         try {
-            var resource = new ClassPathResource(templatePrefix + filename);
-            return Files.readString(resource.getFile().toPath(), StandardCharsets.UTF_8);
+            ClassPathResource resource = new ClassPathResource(path);
+            try (var is = resource.getInputStream()) {
+                return new String(is.readAllBytes(), StandardCharsets.UTF_8);
+            }
         } catch (Exception e) {
-            log.error("Could not load email template: {}", filename, e);
-            return ""; // fallback to empty template
+            log.error("Could not load email template from classpath: {}", path, e);
+            return ""; // fallback to empty template so caller uses inline HTML
         }
     }
 
@@ -116,7 +119,25 @@ public class EmailService {
     // -------------------------------------------------
     public void sendLoginNotification(User user, String ip, String userAgent) {
 
-        String template = loadTemplate("login-notification.html");
+        String template = "<!DOCTYPE html>\n" +
+                "<html lang=\"en\">\n" +
+                "<head>\n" +
+                "    <meta charset=\"UTF-8\">\n" +
+                "    <title>New login to your account</title>\n" +
+                "</head>\n" +
+                "<body>\n" +
+                "<h2>New Login Detected</h2>\n" +
+                "<p>Hi {{username}},</p>\n" +
+                "<p>We noticed a new login to your account.</p>\n" +
+                "<ul>\n" +
+                "    <li><b>Email:</b> {{email}}</li>\n" +
+                "    <li><b>IP Address:</b> {{ip}}</li>\n" +
+                "    <li><b>Device:</b> {{userAgent}}</li>\n" +
+                "</ul>\n" +
+                "<p>If this was you, you can ignore this email.</p>\n" +
+                "<p>If you don’t recognize this login, please change your password immediately.</p>\n" +
+                "</body>\n" +
+                "</html>\n";
 
         if (template.isBlank()) {
             template = """
