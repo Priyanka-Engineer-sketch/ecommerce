@@ -1,8 +1,11 @@
 package com.ecomm.order.domain;
 
 public enum OrderStatus {
-    PENDING,        // just created, saga not finished
-    CONFIRMED,      // inventory + payment + shipping ok
-    CANCELLED,      // saga failed, rolled back
-    FAILED          // unrecoverable error
+    PENDING,        // just created, saga running
+    CONFIRMED,      // inventory + payment ok
+    READY_TO_SHIP,  // packing done, handover to courier soon
+    SHIPPED,
+    DELIVERED,
+    CANCELLED,
+    FAILED          // unrecoverable saga error
 }

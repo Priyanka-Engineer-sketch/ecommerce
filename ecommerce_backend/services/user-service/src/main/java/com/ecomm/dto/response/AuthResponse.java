@@ -14,6 +14,8 @@ public record AuthResponse(
         String email,
         String username,
         Set<String> roles,
-        Set<String> permissions
+        Set<String> permissions,
+        Boolean requires2FA,
+        String message
 ) {
 }

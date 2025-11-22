@@ -1,4 +1,4 @@
-package com.ecomm.config.security.util;
+package com.ecomm.securitycommon;
 
 
 import org.springframework.security.access.AccessDeniedException;

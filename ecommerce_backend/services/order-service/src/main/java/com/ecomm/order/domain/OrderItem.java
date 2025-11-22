@@ -5,10 +5,10 @@ import lombok.*;
 
 @Entity
 @Table(name = "order_items")
-@Data
-@Builder
+@Getter @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class OrderItem {
 
     @Id
@@ -17,6 +17,11 @@ public class OrderItem {
 
     private String productId;
     private String productName;
-    private int quantity;
+
     private double price;
+    private int quantity;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_id")
+    private Order order;
 }

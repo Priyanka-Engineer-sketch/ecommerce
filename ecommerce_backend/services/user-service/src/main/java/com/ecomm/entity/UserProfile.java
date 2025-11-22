@@ -16,6 +16,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
+import java.time.Instant;
+
 @Entity
 @Table(name = "user_profiles")
 @Getter
@@ -31,11 +33,16 @@ public class UserProfile {
 
     private String firstName;
     private String lastName;
+    private String displayName;
+    private String avatarUrl;
     private String address;
     private String city;
     private String country;
     private String postalCode;
-
+    private Double rating = 0.0;
+    private Integer totalReviews = 0;
+    private Instant createdAt;
+    private Instant updatedAt;
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     @ToString.Exclude
