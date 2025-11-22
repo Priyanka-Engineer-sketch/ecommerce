@@ -31,32 +31,47 @@ public class SecurityConfig {
     private final RateLimitFilter rateLimitFilter; // local to user-service
 
     private static final String[] PUBLIC = {
-            // Public User APIs
-            "/api/public/**",
 
-            // Auth APIs
-            "/api/users/register",
-            "/api/users/login",
-            "/api/users/refresh",
-            "/api/users/verify-email",
-            "/api/users/resend-verification",
-
+            // ---------------------------
+            // AUTH MODULE (NEW)
+            // ---------------------------
             "/api/auth/login",
             "/api/auth/register",
+            "/api/auth/refresh",
+            "/api/auth/forgot-password",
+            "/api/auth/reset-password",
             "/api/auth/verify-email",
             "/api/auth/resend-verification",
+            "/api/auth/login-2fa/**",
+            "/api/auth/login-fraud/**",
+            "/api/auth/login/2fa",
+            "/api/auth/login/fraud-verify",
 
-            // OAuth login (future)
+            // ---------------------------
+            // USER PUBLIC (if needed)
+            // ---------------------------
+            "/api/public/**",
+
+            // ---------------------------
+            // OAUTH2 (future)
+            // ---------------------------
             "/oauth2/**",
             "/login/oauth2/**",
 
-            // Docs / Monitoring
+            // ---------------------------
+            // API DOCS
+            // ---------------------------
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html",
+
+            // ---------------------------
+            // ACTUATOR SAFE ENDPOINTS
+            // ---------------------------
             "/actuator/health",
             "/actuator/info"
     };
+
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {

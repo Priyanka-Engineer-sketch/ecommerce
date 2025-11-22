@@ -75,22 +75,22 @@ public class SagaKafkaTopicConfig {
                 .build();
     }
 
-    @Bean
-    public NewTopic userRegisteredTopic() {
-        return TopicBuilder.name(SagaKafkaTopics.USER_REGISTERED)
-                .partitions(3)
-                .replicas(1)
-                .build();
-    }
-
-    @Bean
-    public NewTopic userLoginTopic() {
-        return TopicBuilder.name(SagaKafkaTopics.USER_LOGIN)
-                .partitions(3)
-                .replicas(1)
-                .build();
-    }
-
+//    @Bean
+//    public NewTopic userRegisteredTopic() {
+//        return TopicBuilder.name(SagaKafkaTopics.USER_REGISTERED)
+//                .partitions(3)
+//                .replicas(1)
+//                .build();
+//    }
+//
+//    @Bean
+//    public NewTopic userLoginTopic() {
+//        return TopicBuilder.name(SagaKafkaTopics.USER_LOGIN)
+//                .partitions(3)
+//                .replicas(1)
+//                .build();
+//    }
+//
     @Bean
     public NewTopic userFraudAlertTopic() {
         return TopicBuilder.name(SagaKafkaTopics.USER_FRAUD_ALERT)

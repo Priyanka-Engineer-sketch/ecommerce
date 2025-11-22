@@ -4,10 +4,12 @@ import com.ecomm.entity.User;
 import com.ecomm.entity.domain.OtpToken;
 import com.ecomm.entity.domain.OtpType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.Optional;
 
+@Repository
 public interface OtpTokenRepository extends JpaRepository<OtpToken, Long> {
 
     Optional<OtpToken> findTopByUserAndTypeAndConsumedFalseOrderByExpiresAtDesc(

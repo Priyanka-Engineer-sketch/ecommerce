@@ -27,8 +27,7 @@ public class FraudOtpServiceImpl implements FraudOtpService {
 
     private final UserRepository userRepository;
     private final OtpTokenRepository otpRepo;
-    private final EmailService emailService;
-    private final AuthServiceImpl authServiceImpl; // reuse token builder
+    private final EmailService emailService;// reuse token builder
     private final FraudOtpTokenRepository fraudOtpRepo;
     private final UserEventProducer userEventProducer;
 
@@ -66,24 +65,7 @@ public class FraudOtpServiceImpl implements FraudOtpService {
     }
 
     @Override
-    public void validateFraudOtp(String email, String otp) {
-        var token = fraudOtpRepo.findByTokenAndConsumedFalse(otp)
-                .orElseThrow(() -> new RuntimeException("Invalid or expired code"));
-
-        if (token.getExpiresAt().isBefore(Instant.now())) {
-            throw new RuntimeException("Code expired");
-        }
-
-        if (!token.getUser().getEmail().equalsIgnoreCase(email)) {
-            throw new RuntimeException("Code does not match this user");
-        }
-
-        token.setConsumed(true);
-        fraudOtpRepo.save(token);
-    }
-
-    @Override
-    public AuthResponse verifyFraudOtp(String email, String otpCode) {
+    public void validateFraudOtp(String email, String otpCode) {
         User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -111,7 +93,7 @@ public class FraudOtpServiceImpl implements FraudOtpService {
         otpRepo.save(token);
 
         // now we trust the login and issue tokens
-        return authServiceImpl.issueTokensForUser(user);
+        userEventProducer.sendFraudAlert(user, 0, "FRAUD_VERIFY_SUCCESS");
     }
 
     private String generateOtp() {

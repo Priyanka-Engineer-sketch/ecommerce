@@ -17,10 +17,10 @@ public class OtpController {
     private final PasswordResetService passwordResetService;
     // ----------- FORGOT PASSWORD FLOW -----------
 
-    @PostMapping("/forgot-password")
-    public void forgotPassword(@RequestBody ForgotPasswordRequest req) {
-        otpService.sendForgotPasswordOtp(req.email());
-    }
+//    @PostMapping("/forgot-password")
+//    public void forgotPassword(@RequestBody ForgotPasswordRequest req) {
+//        otpService.sendForgotPasswordOtp(req.email());
+//    }
 
     @PostMapping("/forgot-password/verify")
     public void verifyForgotPassword(@RequestBody FraudOtpVerifyRequest req) {
