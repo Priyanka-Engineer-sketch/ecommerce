@@ -1,17 +1,24 @@
 package com.ecomm.service.impl;
 
 import com.ecomm.config.security.JwtService;
-import com.ecomm.config.security.SecurityFlags;
+import com.ecomm.config.security.ai.LoginRiskEngine;
 import com.ecomm.dto.request.LoginRequest;
 import com.ecomm.dto.request.RegisterRequest;
 import com.ecomm.dto.response.AuthResponse;
 import com.ecomm.dto.response.UserResponse;
 import com.ecomm.entity.Role;
 import com.ecomm.entity.User;
+import com.ecomm.entity.domain.fraud.FraudRiskLevel;
+import com.ecomm.entity.domain.fraud.FraudScoreService;
 import com.ecomm.exception.UserAlreadyExistsException;
+import com.ecomm.notification.EmailService;
 import com.ecomm.repository.RoleRepository;
 import com.ecomm.repository.UserRepository;
+import com.ecomm.saga.kafka.UserEventProducer;
+import com.ecomm.securitycommon.SecurityFlags;
 import com.ecomm.service.AuthService;
+import com.ecomm.service.FraudOtpService;
+import com.ecomm.service.OtpService;          // <-- use interface, not impl
 import com.ecomm.util.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -39,6 +46,19 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager; // ok if unused
     private final SecurityFlags flags;
+    private final EmailService emailService;
+
+    // fraud / risk / kafka / otp
+    private final FraudScoreService fraudScoreService;
+    private final FraudOtpService fraudOtpService;
+    private final UserEventProducer userEventProducer;
+    private final LoginRiskEngine riskEngine;
+    private final OtpService otpService;
+
+    private final SecurityAuditServiceImpl auditService;
+    // ------------------------------------------------------------------------
+    // Registration
+    // ------------------------------------------------------------------------
 
     @Override
     @CacheEvict(value = "usersByEmail", key = "#req.email")
@@ -57,12 +77,12 @@ public class AuthServiceImpl implements AuthService {
         u.setUsername(req.getUsername());
         u.setPasswordHash(passwordEncoder.encode(req.getPassword()));
         u.setIsActive(true);
-        u.setIsEmailVerified(flags.autoVerifyOnRegister); // true in tests
+        u.setIsEmailVerified(flags.autoVerifyOnRegister); // true in tests/dev
         u.setTokenVersion(0);
-        // IMPORTANT: initialize roles collection to avoid NPEs
         u.setRoles(new HashSet<>(List.of(userRole)));
 
         User saved = userRepository.save(u);
+        // you can also send welcome email + kafka event here if you want
         return buildTokens(saved);
     }
 
@@ -90,27 +110,70 @@ public class AuthServiceImpl implements AuthService {
         return UserMapper.toResponse(userRepository.save(user));
     }
 
+    // ------------------------------------------------------------------------
+    // Login with fraud scoring + 2FA
+    // ------------------------------------------------------------------------
+
     @Override
     @Transactional(readOnly = true)
-    public AuthResponse login(LoginRequest req) {
+    public AuthResponse login(LoginRequest req, String ip, String userAgent) {
         User u = userRepository.findByEmailIgnoreCase(req.email())
                 .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+
         if (!passwordEncoder.matches(req.password(), u.getPasswordHash())) {
             throw new RuntimeException("Invalid email or password");
         }
+
+        // 1) AI-style fraud scoring (HIGH -> hard block + fraud OTP)
+        FraudRiskLevel risk = fraudScoreService.evaluateLoginRisk(u, ip, userAgent);
+        if (risk == FraudRiskLevel.HIGH) {
+            // Do NOT issue tokens. Require special fraud verification OTP.
+            fraudOtpService.createFraudOtpForLogin(u, ip, userAgent);
+            throw new RuntimeException(
+                    "High risk login detected. Verification code sent to your email.");
+        }
+
+        // 2) Lightweight heuristic risk engine (e.g. device/ip anomalies)
+        int riskScore = riskEngine.calculateRisk(u.getEmail(), ip, userAgent);
+        int riskCounter = riskEngine.calculateRisk(u.getEmail(), ip, userAgent);
+
+        if (riskCounter >= 60) {
+            otpService.sendOtp(u.getEmail(), "FRAUD_VERIFY");
+            userEventProducer.sendFraudAlert(u, riskCounter,"FRAUD_VERIFY");
+            auditService.log(u, "LOGIN_SUSPICIOUS",
+                    "RiskScore=" + riskCounter,
+                    ip, userAgent);
+            return AuthResponse.builder()
+                    .requires2FA(true)
+                    .message("Suspicious login detected")
+                    .email(u.getEmail())
+                    .build();
+        }
+
+        // 3) Normal login: send notifications + kafka, then issue tokens
+        emailService.sendLoginNotification(u, ip, userAgent);
+        userEventProducer.sendLoginEvent(u, ip, userAgent,riskScore);
+        auditService.log(u, "LOGIN_SUCCESS",
+                "RiskScore=" + riskCounter,
+                ip, userAgent);
+
         return buildTokens(u);
     }
+
+    // ------------------------------------------------------------------------
+    // Refresh
+    // ------------------------------------------------------------------------
 
     @Override
     public AuthResponse refresh(String refreshToken) {
         if (!jwtService.validate(refreshToken) || !jwtService.isRefreshToken(refreshToken)) {
             throw new RuntimeException("Invalid refresh token");
         }
+
         String email = jwtService.extractUsername(refreshToken);
         User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Optional tokenVersion check (if you want rotation to invalidate old tokens)
         Integer ver = jwtService.extractTokenVersion(refreshToken);
         if (ver != null && !ver.equals(user.getTokenVersion())) {
             throw new RuntimeException("Refresh token expired");
@@ -118,13 +181,16 @@ public class AuthServiceImpl implements AuthService {
         return buildTokens(user);
     }
 
-    @Cacheable(value = "usersByEmail", key = "#email") // ✅ cache user by email
+    // ------------------------------------------------------------------------
+    // Helpers / cache
+    // ------------------------------------------------------------------------
+
+    @Cacheable(value = "usersByEmail", key = "#email")
     public User loadUserByEmail(String email) {
         return userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
-    // ===== helpers =====
     private AuthResponse buildTokens(User user) {
         Set<String> roles = safeRoles(user);
         Set<String> perms = safePerms(user);
@@ -136,12 +202,14 @@ public class AuthServiceImpl implements AuthService {
                 .accessToken(access)
                 .refreshToken(refresh)
                 .tokenType("Bearer")
-                .expiresIn((int) jwtService.getAccessTokenValiditySeconds())
+                .expiresIn(jwtService.getAccessTokenValiditySeconds())
                 .userId(user.getId())
                 .email(user.getEmail())
                 .username(user.getUsername())
                 .roles(roles)
                 .permissions(perms)
+                .requires2FA(false)
+                .message(null)
                 .build();
     }
 
@@ -163,5 +231,18 @@ public class AuthServiceImpl implements AuthService {
                         .filter(Objects::nonNull)
                         .map(p -> p.getName()))
                 .collect(Collectors.toSet());
+    }
+
+    // Used by /login/2fa and /login/fraud-verify after OTP is validated
+    @Override
+    public AuthResponse issueTokensForUser(String email) {
+        User user = userRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return buildTokens(user);
+    }
+
+    // optional overload if you already have the entity
+    public AuthResponse issueTokensForUser(User user) {
+        return buildTokens(user);
     }
 }

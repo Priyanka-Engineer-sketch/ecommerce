@@ -1,23 +1,7 @@
 package com.ecomm.entity;
 
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
-import jakarta.persistence.ManyToMany;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
+import jakarta.persistence.*;
+import lombok.*;
 
 import java.util.HashSet;
 import java.util.Objects;
@@ -37,18 +21,23 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** PUBLIC / IDENTIFIABLE USERNAME */
     @ToString.Include
     @Column(nullable = false, unique = true, length = 100)
     private String username;
 
+    /** LOGIN EMAIL */
     @Column(nullable = false, unique = true, length = 150)
     private String email;
 
+    /** BCRYPT PASSWORD HASH */
     @Column(nullable = false, name = "password_hash")
     private String passwordHash;
 
+    /** OPTIONAL PHONE NUMBER */
     private String phone;
 
+    /** ACCOUNT STATUS FLAGS */
     @Builder.Default
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
@@ -57,15 +46,26 @@ public class User {
     @Column(name = "is_email_verified", nullable = false)
     private Boolean isEmailVerified = false;
 
+    /** TOKEN VERSION FOR JWT INVALIDATION */
+    @Builder.Default
     @Column(name = "token_version", nullable = false)
     private int tokenVersion = 1;
 
-    @OneToOne(mappedBy = "user",
+    /**
+     * USER PROFILE (NAME, AVATAR, ADDRESS, CITY, PUBLIC INFO, ETC)
+     * One-to-One
+     */
+    @OneToOne(
+            mappedBy = "user",
             cascade = CascadeType.ALL,
             orphanRemoval = true,
-            fetch = FetchType.LAZY)
+            fetch = FetchType.LAZY
+    )
     private UserProfile profile;
 
+    /**
+     * ROLES (ROLE_USER, ROLE_ADMIN, ROLE_MANAGER, etc.)
+     */
     @Builder.Default
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
@@ -75,7 +75,11 @@ public class User {
     )
     private Set<Role> roles = new HashSet<>();
 
-    // --- helper methods for bidirectional consistency ---
+
+    // ===============================
+    // Helper Methods
+    // ===============================
+
     public void addRole(Role role) {
         this.roles.add(role);
     }
@@ -84,7 +88,14 @@ public class User {
         this.roles.remove(role);
     }
 
-    // ---- ID-based equality ----
+    public void incrementTokenVersion() {
+        this.tokenVersion += 1;
+    }
+
+    // ===============================
+    // equals & hashCode (Best Practice)
+    // ===============================
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

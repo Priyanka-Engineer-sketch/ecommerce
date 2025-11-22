@@ -8,6 +8,7 @@ import com.ecomm.dto.response.AuthResponse;
 import com.ecomm.dto.response.UserProfileResponse;
 import com.ecomm.service.AuthService;
 import com.ecomm.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -33,10 +34,18 @@ public class UserController {
         return ResponseEntity.ok(authService.register(request));
     }
 
-    // Login (public)
+//    // Login (public)
+//    @PostMapping("/login")
+//    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+//        return ResponseEntity.ok(authService.login(request));
+//    }
+
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        return ResponseEntity.ok(authService.login(request));
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest req,
+                                              HttpServletRequest httpReq) {
+        String ip = httpReq.getRemoteAddr();
+        String agent = httpReq.getHeader("User-Agent");
+        return ResponseEntity.ok(authService.login(req, ip, agent));
     }
 
     // Refresh (public)

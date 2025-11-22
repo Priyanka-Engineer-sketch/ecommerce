@@ -84,4 +84,3 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         chain.doFilter(req, res);
     }
 }
-

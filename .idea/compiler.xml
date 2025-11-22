@@ -8,8 +8,8 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="config-server" />
-        <module name="saga-kafka-lib" />
         <module name="discovery-server" />
+        <module name="saga-kafka-lib" />
       </profile>
       <profile name="Annotation profile for ecommerce" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
@@ -21,6 +21,7 @@
         <module name="api-gateway" />
         <module name="order-service" />
         <module name="user-service" />
+        <module name="security-common" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel target="21" />
@@ -32,6 +33,7 @@
       <module name="discovery-server" options="-parameters" />
       <module name="order-service" options="-parameters" />
       <module name="saga-kafka-lib" options="-parameters" />
+      <module name="security-common" options="-parameters" />
       <module name="user-service" options="-parameters" />
     </option>
   </component>

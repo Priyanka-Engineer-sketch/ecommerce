@@ -6,8 +6,9 @@ import java.time.Instant;
 import java.util.List;
 
 public record OrderResponse(
-        String orderId,
+        String id,   // externalOrderId
         CreateOrderRequest.CustomerDto customer,
+        CreateOrderRequest.ShippingAddressDto shippingAddress,
         List<CreateOrderRequest.OrderItemDto> items,
         double totalAmount,
         OrderStatus status,

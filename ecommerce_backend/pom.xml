@@ -50,6 +50,7 @@
         <!-- add/keep all your modules here -->
         <module>platform/api-gateway</module>
         <module>platform/config-server</module>
+        <module>common/security-common</module>
         <module>platform/discovery-server</module>
         <module>services/user-service</module>
         <module>common/saga-kafka-lib</module>

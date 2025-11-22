@@ -27,29 +27,30 @@ import java.io.IOException;
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class SecurityConfig {
 
-    private final JwtAuthFilter jwtAuthFilter;
-    private final RateLimitFilter rateLimitFilter;
+    private final JwtAuthFilter jwtAuthFilter;   // from security-common
+    private final RateLimitFilter rateLimitFilter; // local to user-service
 
-    // PUBLIC only truly public endpoints (no token needed)
     private static final String[] PUBLIC = {
-            // user auth
+            // Public User APIs
+            "/api/public/**",
+
+            // Auth APIs
             "/api/users/register",
             "/api/users/login",
             "/api/users/refresh",
             "/api/users/verify-email",
             "/api/users/resend-verification",
 
-            // auth-controller public endpoints
             "/api/auth/login",
             "/api/auth/register",
             "/api/auth/verify-email",
             "/api/auth/resend-verification",
 
-            // OAuth2 callbacks
+            // OAuth login (future)
             "/oauth2/**",
             "/login/oauth2/**",
 
-            // Docs & health/info
+            // Docs / Monitoring
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html",
@@ -59,35 +60,33 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(AbstractHttpConfigurer::disable)
+
+        http.csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .sessionManagement(sm ->
                         sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((req, res, e) ->
-                                writeJson(res, HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized Access"))
+                                writeJson(res, HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized"))
                         .accessDeniedHandler((req, res, e) ->
-                                writeJson(res, HttpServletResponse.SC_FORBIDDEN, "Access Denied"))
+                                writeJson(res, HttpServletResponse.SC_FORBIDDEN, "Forbidden"))
                 )
+
                 .authorizeHttpRequests(auth -> auth
-                        // 1) Fully public
                         .requestMatchers(PUBLIC).permitAll()
                         .requestMatchers(HttpMethod.GET, "/actuator/**").permitAll()
 
-                        // 2) Authenticated user endpoints
                         .requestMatchers("/api/auth/me").authenticated()
                         .requestMatchers("/api/users/me", "/api/users/me/**").authenticated()
 
-                        // 3) Admin-only endpoints
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        // (optional) any other /api/users/** that is not /me can be admin-only:
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
 
-                        // 4) everything else needs authentication
                         .anyRequest().authenticated()
                 )
+
+                // Apply filters in correct order
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(rateLimitFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -97,8 +96,9 @@ public class SecurityConfig {
     private void writeJson(HttpServletResponse res, int status, String message) throws IOException {
         res.setStatus(status);
         res.setContentType("application/json");
-        String body = String.format("{\"status\":%d,\"error\":\"%s\"}", status, message);
-        res.getWriter().write(body);
+        res.getWriter().write(
+                "{\"status\":" + status + ",\"error\":\"" + message + "\"}"
+        );
     }
 
     @Bean
@@ -111,4 +111,3 @@ public class SecurityConfig {
         return cfg.getAuthenticationManager();
     }
 }
-

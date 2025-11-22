@@ -1,4 +1,4 @@
-package com.ecomm.config.security;
+package com.ecomm.securitycommon;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;

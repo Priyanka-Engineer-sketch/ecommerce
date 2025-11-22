@@ -74,4 +74,44 @@ public class SagaKafkaTopicConfig {
                 .replicas(1)
                 .build();
     }
+
+    @Bean
+    public NewTopic userRegisteredTopic() {
+        return TopicBuilder.name(SagaKafkaTopics.USER_REGISTERED)
+                .partitions(3)
+                .replicas(1)
+                .build();
+    }
+
+    @Bean
+    public NewTopic userLoginTopic() {
+        return TopicBuilder.name(SagaKafkaTopics.USER_LOGIN)
+                .partitions(3)
+                .replicas(1)
+                .build();
+    }
+
+    @Bean
+    public NewTopic userFraudAlertTopic() {
+        return TopicBuilder.name(SagaKafkaTopics.USER_FRAUD_ALERT)
+                .partitions(3)
+                .replicas(1)
+                .build();
+    }
+
+    @Bean
+    public NewTopic userPasswordResetTopic() {
+        return TopicBuilder.name(SagaKafkaTopics.USER_PASSWORD_RESET)
+                .partitions(3)
+                .replicas(1)
+                .build();
+    }
+
+    @Bean
+    public NewTopic userEmailOutboxTopic() {
+        return TopicBuilder.name(SagaKafkaTopics.USER_EMAIL_OUTBOX)
+                .partitions(3)
+                .replicas(1)
+                .build();
+    }
 }

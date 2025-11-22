@@ -1,35 +1,90 @@
 package com.ecomm.config;
 
 import com.ecomm.config.security.JwtAuthFilter;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import java.io.IOException;
+
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+    // ⬅ from security-common module
     private final JwtAuthFilter jwtAuthFilter;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
         http
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/orders/**").authenticated()
-                        .requestMatchers("/actuator/**").permitAll()
-                        .anyRequest().permitAll()
+                // --- Stateless JWT app ---
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(Customizer.withDefaults())
+                .sessionManagement(sm ->
+                        sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-                .csrf(AbstractHttpConfigurer::disable); // ✅ updated replacement for csrf().disable()
+
+                // --- Consistent JSON errors (401 / 403) ---
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((req, res, e) ->
+                                writeJson(res, HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized"))
+                        .accessDeniedHandler((req, res, e) ->
+                                writeJson(res, HttpServletResponse.SC_FORBIDDEN, "Forbidden"))
+                )
+
+                // --- Authorization rules ---
+                .authorizeHttpRequests(auth -> auth
+
+                        // health/info for k8s or monitoring
+                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+
+                        // NOTE: inside order-service controller base path is "/orders"
+                        // Gateway adds "/api" and strips it before forwarding.
+                        // So we always match on "/orders/**" here.
+
+                        // Create order -> only authenticated USER role
+                        .requestMatchers(HttpMethod.POST, "/orders/**")
+                        .hasRole("USER")
+
+                        // Read orders -> both USER and ADMIN (controller does owner checks)
+                        .requestMatchers(HttpMethod.GET, "/orders/**")
+                        .hasAnyRole("USER", "ADMIN")
+
+                        // Update & cancel -> USER + ADMIN, but business rules are in controller/service
+                        .requestMatchers(HttpMethod.PUT, "/orders/**")
+                        .hasAnyRole("USER", "ADMIN")
+
+                        .requestMatchers(HttpMethod.DELETE, "/orders/**")
+                        .hasAnyRole("USER", "ADMIN")
+
+                        // Anything else must be authenticated
+                        .anyRequest().authenticated()
+                )
+
+                // --- Attach shared JWT filter before username/password filter ---
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    private void writeJson(HttpServletResponse res, int status, String message) throws IOException {
+        res.setStatus(status);
+        res.setContentType("application/json");
+        res.getWriter().write(
+                "{\"status\":" + status + ",\"error\":\"" + message + "\"}"
+        );
     }
 }

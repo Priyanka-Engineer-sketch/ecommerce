@@ -2,38 +2,48 @@ package com.ecomm.order.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
-
-@Data
-@Builder
+@Entity
+@Table(name = "orders")
+@Getter @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
+@Builder
 public class Order {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String externalOrderId;   // e.g. "O123456" if you want human readable
+    @Column(unique = true, nullable = false)
+    private String externalOrderId;
 
     @Embedded
     private CustomerInfo customer;
 
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "order_id")
-    @Builder.Default
+    @Embedded
+    private ShippingAddress shippingAddress;
+
+    @OneToMany(mappedBy = "order",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true)
     private List<OrderItem> items = new ArrayList<>();
 
     private double totalAmount;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private OrderStatus status;
 
     private Instant createdAt;
     private Instant updatedAt;
+
+    // helper
+    public void addItem(OrderItem item) {
+        this.items.add(item);
+        item.setOrder(this);
+    }
 }

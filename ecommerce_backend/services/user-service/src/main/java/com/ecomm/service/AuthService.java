@@ -10,7 +10,9 @@ public interface AuthService {
 
     AuthResponse register(RegisterRequest req);
 
-    AuthResponse login(LoginRequest req);
+    AuthResponse login(LoginRequest req, String ip, String userAgent);
 
     AuthResponse refresh(String refreshToken);
+
+    AuthResponse issueTokensForUser(String email);
 }
