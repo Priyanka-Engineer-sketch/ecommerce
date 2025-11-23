@@ -1,5 +1,6 @@
 package com.ecomm.order.service;
 
+import com.ecomm.notification.OrderEvents;
 import com.ecomm.events.order.OrderSagaStartEvent;
 import com.ecomm.events.order.SagaStep;
 import com.ecomm.order.domain.*;
@@ -11,6 +12,7 @@ import com.ecomm.order.saga.OrderSagaMapper;
 import com.ecomm.saga.kafka.SagaKafkaTopics;
 import com.ecomm.saga.kafka.SagaMessageKeys;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -26,11 +28,17 @@ public class OrderApplicationService {
 
     private final OrderRepository orderRepository;
     private final KafkaTemplate<String, Object> sagaKafkaTemplate;
+    private final ApplicationEventPublisher eventPublisher;
 
     // statuses where USER cannot modify/cancel
     private static final EnumSet<OrderStatus> USER_CANNOT_EDIT =
-            EnumSet.of(OrderStatus.CONFIRMED, OrderStatus.READY_TO_SHIP,
-                    OrderStatus.SHIPPED, OrderStatus.DELIVERED, OrderStatus.CANCELLED);
+            EnumSet.of(
+                    OrderStatus.CONFIRMED,
+                    OrderStatus.READY_TO_SHIP,
+                    OrderStatus.SHIPPED,
+                    OrderStatus.DELIVERED,
+                    OrderStatus.CANCELLED
+            );
 
     // -------------------------------------------------------------------------
     // CREATE ORDER
@@ -38,14 +46,14 @@ public class OrderApplicationService {
     @Transactional
     public OrderResponse createOrder(String userIdFromToken, CreateOrderRequest request) {
 
-        // 1. Build CustomerInfo – ALWAYS override with userId from JWT
+        // 1. Customer info – ID forced from JWT
         CustomerInfo customer = CustomerInfo.builder()
                 .customerId(userIdFromToken)
                 .name(request.customer().name())
                 .email(request.customer().email())
                 .build();
 
-        // 2. Build ShippingAddress
+        // 2. Shipping
         ShippingAddress shipping = ShippingAddress.builder()
                 .line1(request.shippingAddress().line1())
                 .line2(request.shippingAddress().line2())
@@ -55,7 +63,7 @@ public class OrderApplicationService {
                 .country(request.shippingAddress().country())
                 .build();
 
-        // 3. Build items
+        // 3. Items
         List<OrderItem> items = request.items().stream()
                 .map(i -> OrderItem.builder()
                         .productId(i.id())
@@ -69,7 +77,7 @@ public class OrderApplicationService {
                 .mapToDouble(i -> i.getPrice() * i.getQuantity())
                 .sum();
 
-        // 4. Create Order
+        // 4. Order
         Order order = Order.builder()
                 .externalOrderId("O-" + System.currentTimeMillis())
                 .customer(customer)
@@ -84,18 +92,30 @@ public class OrderApplicationService {
 
         order = orderRepository.save(order);
 
+        // 🔔 EVENT: order placed
+        eventPublisher.publishEvent(new OrderEvents.OrderPlacedEvent(
+                order.getId(),
+                order.getExternalOrderId(),
+                order.getCustomer().getCustomerId(),
+                order.getCustomer().getName(),
+                order.getCustomer().getEmail(),
+                order.getTotalAmount(),
+                order.getStatus(),
+                order.getCreatedAt()
+        ));
+
         // 5. Start Saga
         String sagaId = OrderSagaMapper.newSagaId();
         OrderSagaStartEvent event = OrderSagaMapper.toStartEvent(sagaId, order);
         String key = SagaMessageKeys.commandKey(sagaId, SagaStep.INVENTORY);
         sagaKafkaTemplate.send(SagaKafkaTopics.ORDER_SAGA_START, key, event);
 
-        // 6. Return DTO
+        // 6. DTO
         return mapToOrderResponse(order);
     }
 
     // -------------------------------------------------------------------------
-    // GET ORDER
+    // GET ORDER BY ID (no auth check here, controller enforces it)
     // -------------------------------------------------------------------------
     @Transactional(readOnly = true)
     public OrderResponse getOrderById(String externalOrderId) {
@@ -125,7 +145,7 @@ public class OrderApplicationService {
                 orders = orderRepository.findAll();
             }
         } else {
-            // user: always forced to own id
+            // user: always bound to own ID
             if (statusFilter != null) {
                 orders = orderRepository.findByCustomer_CustomerIdAndStatus(currentUserId, statusFilter);
             } else {
@@ -137,7 +157,7 @@ public class OrderApplicationService {
     }
 
     // -------------------------------------------------------------------------
-    // UPDATE ORDER DETAILS
+    // UPDATE ORDER DETAILS (items / address)
     // -------------------------------------------------------------------------
     @Transactional
     public OrderResponse updateOrder(String externalOrderId, String currentUserId,
@@ -197,8 +217,12 @@ public class OrderApplicationService {
     // UPDATE ORDER STATUS
     // -------------------------------------------------------------------------
     @Transactional
-    public OrderResponse updateOrderStatus(String externalOrderId, String currentUserId,
-                                           boolean isAdmin, OrderStatus newStatus) {
+    public OrderResponse updateOrderStatus(
+            String externalOrderId,
+            String currentUserId,
+            boolean isAdmin,
+            OrderStatus newStatus
+    ) {
 
         Order order = orderRepository.findByExternalOrderId(externalOrderId)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + externalOrderId));
@@ -209,7 +233,7 @@ public class OrderApplicationService {
             if (!ownsOrder) {
                 throw new AccessDeniedException("You cannot modify another user's order.");
             }
-            // user can ONLY cancel, and only if current status is still modifiable
+            // user can ONLY cancel
             if (newStatus != OrderStatus.CANCELLED) {
                 throw new AccessDeniedException("Users can only cancel their own orders.");
             }
@@ -223,10 +247,23 @@ public class OrderApplicationService {
             }
         }
 
+        OrderStatus previous = order.getStatus();
         order.setStatus(newStatus);
         order.setUpdatedAt(Instant.now());
 
-        // TODO: send ORDER_STATUS_UPDATED / CANCELLED events here if needed
+        // 🔔 FIRE CANCEL EVENT
+        if (newStatus == OrderStatus.CANCELLED && previous != OrderStatus.CANCELLED) {
+            eventPublisher.publishEvent(new OrderEvents.OrderCancelledEvent(
+                    order.getId(),
+                    order.getExternalOrderId(),
+                    order.getCustomer().getCustomerId(),
+                    order.getCustomer().getName(),
+                    order.getCustomer().getEmail(),
+                    order.getTotalAmount(),
+                    previous,
+                    order.getUpdatedAt()
+            ));
+        }
 
         return mapToOrderResponse(order);
     }
@@ -243,7 +280,7 @@ public class OrderApplicationService {
         boolean ownsOrder = order.getCustomer().getCustomerId().equals(currentUserId);
 
         if (!isAdmin) {
-            // For USER: treat DELETE as "cancel"
+            // USER: treat DELETE as cancel
             if (!ownsOrder) {
                 throw new AccessDeniedException("You cannot cancel another user's order.");
             }
@@ -251,11 +288,25 @@ public class OrderApplicationService {
                 throw new AccessDeniedException("Order cannot be cancelled after it is " + order.getStatus());
             }
 
+            OrderStatus previous = order.getStatus();
+
             order.setStatus(OrderStatus.CANCELLED);
             order.setUpdatedAt(Instant.now());
-            // TODO: publish OrderCancelledEvent if you want
+
+            // 🔔 EVENT
+            eventPublisher.publishEvent(new OrderEvents.OrderCancelledEvent(
+                    order.getId(),
+                    order.getExternalOrderId(),
+                    order.getCustomer().getCustomerId(),
+                    order.getCustomer().getName(),
+                    order.getCustomer().getEmail(),
+                    order.getTotalAmount(),
+                    previous,
+                    order.getUpdatedAt()
+            ));
+
         } else {
-            // ADMIN: hard delete allowed except DELIVERED
+            // ADMIN hard delete except DELIVERED
             if (order.getStatus() == OrderStatus.DELIVERED) {
                 throw new IllegalStateException("Delivered orders cannot be deleted.");
             }

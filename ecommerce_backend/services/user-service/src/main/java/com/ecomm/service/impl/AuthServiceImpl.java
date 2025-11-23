@@ -12,16 +12,12 @@ import com.ecomm.entity.UserProfile;
 import com.ecomm.entity.domain.fraud.FraudRiskLevel;
 import com.ecomm.entity.domain.fraud.FraudScoreService;
 import com.ecomm.exception.UserAlreadyExistsException;
-import com.ecomm.notification.EmailService;
 import com.ecomm.repository.RoleRepository;
 import com.ecomm.repository.UserProfileRepository;
 import com.ecomm.repository.UserRepository;
 import com.ecomm.saga.kafka.UserEventProducer;
 import com.ecomm.securitycommon.SecurityFlags;
-import com.ecomm.service.AsyncLoginSideEffects;
-import com.ecomm.service.AuthService;
-import com.ecomm.service.FraudOtpService;
-import com.ecomm.service.OtpService;          // <-- use interface, not impl
+import com.ecomm.service.*;
 import com.ecomm.util.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -32,10 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -49,36 +42,32 @@ public class AuthServiceImpl implements AuthService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
-    private final AuthenticationManager authenticationManager; // ok if unused
+    private final AuthenticationManager authenticationManager;
     private final SecurityFlags flags;
     private final AsyncLoginSideEffects asyncLoginSideEffects;
 
-    // fraud / risk / kafka / otp
     private final FraudScoreService fraudScoreService;
     private final FraudOtpService fraudOtpService;
-    private final UserEventProducer userEventProducer;
+    private final UserEventProducer userEventProducer; // ⭐ Kafka Producer
     private final LoginRiskEngine riskEngine;
     private final OtpService otpService;
 
     private final SecurityAuditServiceImpl auditService;
-    // ------------------------------------------------------------------------
-    // Registration
-    // ------------------------------------------------------------------------
 
+    // =====================================================================================
+    // REGISTER
+    // =====================================================================================
     @Override
     @CacheEvict(value = "usersByEmail", key = "#req.email")
-    @Transactional
     public AuthResponse register(RegisterRequest req) {
+
         if (userRepository.existsByEmailIgnoreCase(req.getEmail())) {
             throw new UserAlreadyExistsException("Email already registered");
         }
 
         Role userRole = roleRepository.findByName("ROLE_USER")
                 .orElseGet(() -> roleRepository.save(
-                        Role.builder()
-                                .name("ROLE_USER")
-                                .description("Standard user")
-                                .build()
+                        Role.builder().name("ROLE_USER").description("Standard user").build()
                 ));
 
         User u = new User();
@@ -92,26 +81,30 @@ public class AuthServiceImpl implements AuthService {
 
         Instant now = Instant.now();
 
-        UserProfile profile = UserProfile.builder()        // if present
-                .displayName(req.getUsername())          // or full name
+        UserProfile profile = UserProfile.builder()
+                .displayName(req.getUsername())
                 .createdAt(now)
                 .updatedAt(now)
                 .build();
 
-        // set both sides of the association
         profile.setUser(u);
         u.setProfile(profile);
 
-        // save only the owner; cascade will save profile
         User saved = userRepository.save(u);
+
+        // ⭐ KAFKA EVENT
+        userEventProducer.sendUserRegisteredEvent(saved);
 
         return buildTokens(saved);
     }
 
-
+    // =====================================================================================
+    // Register User by Admin
+    // =====================================================================================
     @Override
     @CacheEvict(value = "usersByEmail", key = "#req.email")
     public UserResponse registerUser(RegisterRequest req) {
+
         if (userRepository.existsByEmailIgnoreCase(req.getEmail())) {
             throw new UserAlreadyExistsException("Email already registered");
         }
@@ -130,16 +123,21 @@ public class AuthServiceImpl implements AuthService {
                 .roles(new HashSet<>(List.of(userRole)))
                 .build();
 
-        return UserMapper.toResponse(userRepository.save(user));
+        User saved = userRepository.save(user);
+
+        // ⭐ KAFKA EVENT
+        userEventProducer.sendUserRegisteredByAdminEvent(saved);
+
+        return UserMapper.toResponse(saved);
     }
 
-    // ------------------------------------------------------------------------
-    // Login with fraud scoring + 2FA
-    // ------------------------------------------------------------------------
-
+    // =====================================================================================
+    // LOGIN
+    // =====================================================================================
     @Override
     @Transactional
     public AuthResponse login(LoginRequest req, String ip, String userAgent) {
+
         User u = userRepository.findByEmailIgnoreCase(req.email())
                 .orElseThrow(() -> new RuntimeException("Invalid email or password"));
 
@@ -147,78 +145,99 @@ public class AuthServiceImpl implements AuthService {
             throw new RuntimeException("Invalid email or password");
         }
 
-        // 1) AI-style fraud scoring
+        // 1) Fraud scoring
         FraudRiskLevel risk = fraudScoreService.evaluateLoginRisk(u, ip, userAgent);
-        if (risk == FraudRiskLevel.HIGH) {
-            // this might still need to be sync, but make sure it's fast
-            fraudOtpService.createFraudOtpForLogin(u, ip, userAgent);
 
-            // SIDE EFFECTS: send mail/alert async
+        if (risk == FraudRiskLevel.HIGH) {
+
+            fraudOtpService.createFraudOtpForLogin(u, ip, userAgent);
             asyncLoginSideEffects.handleHighRiskLogin(u, ip, userAgent);
+
+            // ⭐ KAFKA EVENT
+            userEventProducer.sendUserFraudLoginEvent(u, ip, userAgent);
 
             throw new RuntimeException("High risk login detected. Verification code sent to your email.");
         }
 
-        // 2) Lightweight heuristic risk engine
+        // 2) Lightweight risk engine
         int riskScore = riskEngine.calculateRisk(u.getEmail(), ip, userAgent);
-        int riskCounter = riskScore;
 
-        if (riskCounter >= 60) {
-            // send OTP + Kafka ASYNC
-            asyncLoginSideEffects.handleSuspiciousLogin(u, riskCounter, ip, userAgent);
+        if (riskScore >= 60) {
+
+            asyncLoginSideEffects.handleSuspiciousLogin(u, riskScore, ip, userAgent);
+
+            // ⭐ KAFKA EVENT
+            userEventProducer.sendUserSuspiciousLoginEvent(u, ip, userAgent, riskScore);
 
             return AuthResponse.builder()
                     .requires2FA(true)
-                    .message("Suspicious login detected")
                     .email(u.getEmail())
+                    .message("Suspicious login detected")
                     .build();
         }
 
-        // 3) Normal login: build tokens first, side effects async
+        // 3) Normal login
         AuthResponse tokens = buildTokens(u);
 
-        asyncLoginSideEffects.handleSuccessfulLogin(u, riskCounter, riskScore, ip, userAgent);
+        asyncLoginSideEffects.handleSuccessfulLogin(u, riskScore, riskScore, ip, userAgent);
+
+        // ⭐ KAFKA EVENT
+        userEventProducer.sendUserLoginSuccessEvent(u, ip, userAgent);
 
         return tokens;
     }
 
-    // ------------------------------------------------------------------------
-    // Refresh
-    // ------------------------------------------------------------------------
-
+    // =====================================================================================
+    // REFRESH TOKEN
+    // =====================================================================================
     @Override
     public AuthResponse refresh(String refreshToken) {
+
         if (!jwtService.validate(refreshToken) || !jwtService.isRefreshToken(refreshToken)) {
             throw new RuntimeException("Invalid refresh token");
         }
 
-        String email = jwtService.extractUsername(refreshToken);
-        User user = userRepository.findByEmailIgnoreCase(email)
+        String userIdString = jwtService.extractUsername(refreshToken);
+
+        User user = userRepository.findById(Long.valueOf(userIdString))
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         Integer ver = jwtService.extractTokenVersion(refreshToken);
         if (ver != null && !ver.equals(user.getTokenVersion())) {
             throw new RuntimeException("Refresh token expired");
         }
+
+        // ⭐ KAFKA EVENT
+        userEventProducer.sendUserRefreshTokenEvent(user);
+
         return buildTokens(user);
     }
 
-    // ------------------------------------------------------------------------
-    // Helpers / cache
-    // ------------------------------------------------------------------------
-
-    @Cacheable(value = "usersByEmail", key = "#email")
-    public User loadUserByEmail(String email) {
-        return userRepository.findByEmailIgnoreCase(email)
+    // =====================================================================================
+    // LOGOUT ALL
+    // =====================================================================================
+    @Override
+    public void logoutAll(Long userId) {
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        user.setTokenVersion(user.getTokenVersion() + 1);
+        userRepository.save(user);
+
+        // ⭐ KAFKA EVENT
+        userEventProducer.sendLogoutAllEvent(userId);
     }
 
+    // =====================================================================================
+    // Helpers
+    // =====================================================================================
     private AuthResponse buildTokens(User user) {
+
         Set<String> roles = safeRoles(user);
         Set<String> perms = safePerms(user);
 
         String access = jwtService.generateAccessToken(user);
-        String refresh = jwtService.generateRefreshToken(user.getEmail());
+        String refresh = jwtService.generateRefreshToken(user);
 
         return AuthResponse.builder()
                 .accessToken(access)
@@ -253,18 +272,5 @@ public class AuthServiceImpl implements AuthService {
                         .filter(Objects::nonNull)
                         .map(p -> p.getName()))
                 .collect(Collectors.toSet());
-    }
-
-    // Used by /login/2fa and /login/fraud-verify after OTP is validated
-    @Override
-    public AuthResponse issueTokensForUser(String email) {
-        User user = userRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        return buildTokens(user);
-    }
-
-    // optional overload if you already have the entity
-    public AuthResponse issueTokensForUser(User user) {
-        return buildTokens(user);
     }
 }

@@ -14,22 +14,20 @@ public class GatewaySecurityConfig {
 
     @Bean
     public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
+
         return http
-                // 🔴 IMPORTANT: disable CSRF for stateless API calls (Postman, SPA, etc.)
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .cors(Customizer.withDefaults())
                 .authorizeExchange(ex -> ex
-                        // allow CORS preflight
+                        // allow CORS preflights
                         .pathMatchers(HttpMethod.OPTIONS).permitAll()
 
-                        // public auth endpoints through gateway
-                        .pathMatchers("/api/auth/login",
-                                "/api/auth/register",
-                                "/api/auth/refresh",
-                                "/actuator/**")
-                        .permitAll()
+                        // public paths (gateway only handles auth at filter level)
+                        .pathMatchers("/api/auth/**").permitAll()
+                        .pathMatchers("/fallback/**").permitAll()
+                        .pathMatchers("/actuator/**").permitAll()
 
-                        // everything else (for now) – you can tighten later
+                        // Gateway will enforce RBAC through JwtAuth filter
                         .anyExchange().permitAll()
                 )
                 .build();

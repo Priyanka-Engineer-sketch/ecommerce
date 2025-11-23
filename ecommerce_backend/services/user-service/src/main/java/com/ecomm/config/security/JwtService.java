@@ -3,102 +3,149 @@ package com.ecomm.config.security;
 import com.ecomm.entity.Permission;
 import com.ecomm.entity.Role;
 import com.ecomm.entity.User;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.Jws;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.*;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 public class JwtService {
 
-    @Value("${app.jwt.secret:}")                       // Base64 or plain string
+    // ===========================
+    // JWT CONFIG FROM YAML
+    // ===========================
+    @Value("${security.jwt.hmac-secret}")
     private String secret;
 
-    @Value("${app.jwt.access-exp-seconds:900}")        // 15 minutes (in SECONDS)
+    @Value("${security.jwt.access-exp-seconds:900}")
     private long accessExpSeconds;
 
-    @Value("${app.jwt.refresh-exp-seconds:2592000}")   // 30 days (in SECONDS)
+    @Value("${security.jwt.refresh-exp-seconds:2592000}")
     private long refreshExpSeconds;
+
+    @Value("${security.jwt.issuer}")
+    private String issuer;
+
+    @Value("${security.jwt.audience}")
+    private String audience;
 
     private Key key;
 
+    // ===========================
+    // KEY INITIALIZATION
+    // ===========================
     @PostConstruct
     public void init() {
-        // Fallback secret for dev/test (don’t use in prod)
-        final String material = (secret == null || secret.isBlank())
-                ? "test-secret-please-change"
-                : secret;
 
-        byte[] keyBytes = null;
+        if (secret == null || secret.isBlank()) {
+            secret = "change-this-secret-please-32-characters-minimum";
+        }
 
-        // 1) Try standard Base64
+        byte[] keyBytes;
+
         try {
-            keyBytes = io.jsonwebtoken.io.Decoders.BASE64.decode(material);
-        } catch (RuntimeException ignored) {
-            // 2) Try Base64URL (handles '-' and '_')
+            keyBytes = Decoders.BASE64.decode(secret);
+        } catch (Exception e1) {
             try {
-                keyBytes = io.jsonwebtoken.io.Decoders.BASE64URL.decode(material);
-            } catch (RuntimeException ignored2) {
-                // 3) Treat as raw text
-                keyBytes = material.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                keyBytes = Decoders.BASE64URL.decode(secret);
+            } catch (Exception e2) {
+                keyBytes = secret.getBytes(StandardCharsets.UTF_8);
             }
         }
 
-        // HS256 requires >= 256-bit key (32 bytes)
         if (keyBytes.length < 32) {
-            keyBytes = java.util.Arrays.copyOf(keyBytes, 32);
+            keyBytes = Arrays.copyOf(keyBytes, 32);
         }
 
-        this.key = io.jsonwebtoken.security.Keys.hmacShaKeyFor(keyBytes);
+        this.key = Keys.hmacShaKeyFor(keyBytes);
     }
-
 
     public long getAccessTokenValiditySeconds() {
         return accessExpSeconds;
     }
 
+    // ===========================
+    // ACCESS TOKEN
+    // ===========================
     public String generateAccessToken(User user) {
+
         Map<String, Object> claims = new HashMap<>();
-        // Ensure your Role names are ROLE_* already; if not, prefix here
-        claims.put("roles", user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()));
-        claims.put("perms", user.getRoles().stream()
-                .flatMap(r -> r.getPermissions().stream())
-                .map(Permission::getName)
-                .collect(Collectors.toSet()));
+
+        // roles as array
+        claims.put("roles",
+                user.getRoles().stream()
+                        .map(Role::getName)
+                        .collect(Collectors.toSet())
+        );
+
+        // permissions as array
+        claims.put("perms",
+                user.getRoles().stream()
+                        .flatMap(r -> r.getPermissions().stream())
+                        .map(Permission::getName)
+                        .collect(Collectors.toSet())
+        );
+
         claims.put("ver", user.getTokenVersion());
         claims.put("typ", "access");
-        return buildToken(user.getEmail(), claims, accessExpSeconds); // seconds
+        claims.put("email", user.getEmail());
+        claims.put("uid", user.getId());
+
+        return buildToken(
+                user.getId().toString(), // 🔥 subject = userId (GATEWAY EXPECTS THIS)
+                claims,
+                accessExpSeconds
+        );
     }
 
+    // ===========================
+    // REFRESH TOKEN
+    // ===========================
     public String generateRefreshToken(User user) {
-        Map<String, Object> claims = Map.of("ver", user.getTokenVersion(), "typ", "refresh");
-        return buildToken(user.getEmail(), claims, refreshExpSeconds); // seconds
+
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("ver", user.getTokenVersion());
+        claims.put("typ", "refresh");
+        claims.put("email", user.getEmail());
+        claims.put("uid", user.getId());
+
+        return buildToken(
+                user.getId().toString(), // 🔥 must be userId
+                claims,
+                refreshExpSeconds
+        );
     }
 
     public String generateRefreshToken(String email) {
         Map<String, Object> claims = Map.of("typ", "refresh");
-        return buildToken(email, claims, refreshExpSeconds); // seconds
+        return buildToken(email, claims, refreshExpSeconds);
     }
 
-    public String extractUsername(String token) {
-        return parse(token).getBody().getSubject();
+    // ===========================
+    // TOKEN VALIDATION
+    // ===========================
+    public boolean validate(String token) {
+        try {
+            Jws<Claims> jws = parse(token);
+            Date exp = jws.getBody().getExpiration();
+            return exp != null && !exp.before(new Date());
+        } catch (ExpiredJwtException e) {
+            return false;
+        } catch (JwtException | IllegalArgumentException e) {
+            return false;
+        }
     }
 
     public boolean isRefreshToken(String token) {
         try {
-            Object typ = parse(token).getBody().get("typ");
-            return "refresh".equals(typ);
+            return "refresh".equals(parse(token).getBody().get("typ"));
         } catch (Exception e) {
             return false;
         }
@@ -107,44 +154,48 @@ public class JwtService {
     public Integer extractTokenVersion(String token) {
         try {
             Object v = parse(token).getBody().get("ver");
-            return (v instanceof Integer i) ? i : (v instanceof Number n ? n.intValue() : null);
+            if (v instanceof Integer) return (Integer) v;
+            if (v instanceof Number) return ((Number) v).intValue();
+            return null;
         } catch (Exception e) {
             return null;
         }
     }
 
-    public boolean validate(String token) {
-        try {
-            // parse() will verify signature & (with skew) expiration
-            Jws<Claims> jws = parse(token);
-            Date exp = jws.getBody().getExpiration();
-            return exp != null && !exp.before(new Date());
-        } catch (ExpiredJwtException e) {
-            // token truly expired
-            return false;
-        } catch (JwtException | IllegalArgumentException e) {
-            // malformed, bad signature, etc.
-            return false;
-        }
+    public String extractUsername(String token) {
+        return parse(token).getBody().getSubject();
     }
 
-    // ---------- internals ----------
+    // ===========================
+    // INTERNAL JWT BUILDER
+    // ===========================
     private String buildToken(String subject, Map<String, Object> claims, long ttlSeconds) {
+
         Date now = new Date();
-        Date exp = new Date(now.getTime() + ttlSeconds * 1000L); // seconds -> ms
+        Date exp = new Date(now.getTime() + ttlSeconds * 1000);
+
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(subject)
+
+                // 🔥 MUST match Gateway’s JwtAuth required fields
+                .setIssuer(issuer)
+                .setAudience(audience)
+
                 .setIssuedAt(now)
                 .setExpiration(exp)
+
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
 
+    // ===========================
+    // PARSE WITH SIGNATURE CHECK
+    // ===========================
     public Jws<Claims> parse(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(key)                 // <— use the Key
-                .setAllowedClockSkewSeconds(60)     // optional skew
+                .setSigningKey(key)
+                .setAllowedClockSkewSeconds(60)
                 .build()
                 .parseClaimsJws(token);
     }
