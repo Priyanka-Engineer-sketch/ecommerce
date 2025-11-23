@@ -15,7 +15,7 @@ WORKDIR /app
 
 COPY --from=build /app/target/*.jar app.jar
 
-# Change this port to match your microservice (inventory/order/user/etc.)
+
 EXPOSE 8084
 
 ENTRYPOINT ["java", "-jar", "app.jar"]
