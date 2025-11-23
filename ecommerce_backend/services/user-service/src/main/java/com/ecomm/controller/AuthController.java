@@ -17,6 +17,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -49,8 +50,9 @@ public class AuthController {
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
 
-    // ---------------- REGISTER ----------------
-
+    // =====================================================================================
+    // REGISTER
+    // =====================================================================================
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest req) {
         return ResponseEntity.ok(authService.register(req));
@@ -61,15 +63,17 @@ public class AuthController {
         return authService.registerUser(req);
     }
 
-    // ---------------- REFRESH TOKEN (PUBLIC) ----------------
-
+    // =====================================================================================
+    // REFRESH TOKEN
+    // =====================================================================================
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody TokenRefreshRequest req) {
         return ResponseEntity.ok(authService.refresh(req.getRefreshToken()));
     }
 
-    // ---------------- CURRENT USER ----------------
-
+    // =====================================================================================
+    // CURRENT USER (ME)
+    // =====================================================================================
     @Operation(summary = "Get current authenticated user (from JWT)")
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/me")
@@ -79,7 +83,10 @@ public class AuthController {
         User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        Set<String> roles = user.getRoles().stream().map(r -> r.getName()).collect(Collectors.toSet());
+        Set<String> roles = user.getRoles().stream()
+                .map(r -> r.getName())
+                .collect(Collectors.toSet());
+
         Set<String> perms = user.getRoles().stream()
                 .flatMap(r -> r.getPermissions().stream())
                 .map(p -> p.getName())
@@ -96,12 +103,14 @@ public class AuthController {
         );
     }
 
-    // ---------------- EMAIL VERIFY ----------------
-
+    // =====================================================================================
+    // EMAIL VERIFY
+    // =====================================================================================
     @GetMapping("/verify-email")
     public String verifyEmail(@RequestParam String token) {
         EmailVerificationToken ev = tokenRepo.findByTokenAndConsumedFalse(token)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid token"));
+
         if (ev.getExpiresAt().isBefore(Instant.now())) {
             throw new IllegalArgumentException("Token expired");
         }
@@ -109,67 +118,91 @@ public class AuthController {
         User u = ev.getUser();
         u.setIsEmailVerified(true);
         ev.setConsumed(true);
+
         return "Email verified successfully";
     }
 
     @PostMapping("/resend-verification")
     public void resend(@RequestParam String email) {
+
         User u = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
+
         if (Boolean.TRUE.equals(u.getIsEmailVerified())) return;
 
         String token = UUID.randomUUID().toString();
+
         tokenRepo.save(EmailVerificationToken.builder()
                 .token(token)
                 .user(u)
                 .expiresAt(Instant.now().plus(Duration.ofHours(24)))
                 .build());
 
-        events.publishEvent(
-                new SecurityEvents.EmailVerificationRequestedEvent(u.getId(), u.getEmail(), token));
+        events.publishEvent(new SecurityEvents.EmailVerificationRequestedEvent(
+                u.getId(), u.getEmail(), token
+        ));
     }
 
-    // ---------------- NORMAL LOGIN + AI RISK ----------------
-
+    // =====================================================================================
+    // NORMAL LOGIN (AI RISK + 2FA SUPPORT)
+    // =====================================================================================
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest req,
-                                              HttpServletRequest httpReq) {
+    public ResponseEntity<AuthResponse> login(
+            @Valid @RequestBody LoginRequest req,
+            HttpServletRequest httpReq) {
+
         String ip = httpReq.getRemoteAddr();
         String agent = httpReq.getHeader("User-Agent");
-        return ResponseEntity.ok(authService.login(req, ip, agent));
+
+        // Actual login inside authService.login()
+        AuthResponse response = authService.login(req, ip, agent);
+        return ResponseEntity.ok(response);
     }
 
-    // ---------------- 2FA LOGIN (explicit OTP) ----------------
-
+    // =====================================================================================
+    // 2FA LOGIN (OTP)
+    // =====================================================================================
     @PostMapping("/login-2fa/request")
-    public void login2faRequest(@Valid @RequestBody LoginRequest req,
-                                HttpServletRequest httpReq) {
+    public void login2faRequest(
+            @Valid @RequestBody LoginRequest req,
+            HttpServletRequest httpReq) {
+
         String ip = httpReq.getRemoteAddr();
         String agent = httpReq.getHeader("User-Agent");
+
         twoFactorAuthService.requestLoginOtp(req, ip, agent);
     }
 
     @PostMapping("/login-2fa/verify")
-    public ResponseEntity<AuthResponse> login2faVerify(@Valid @RequestBody LoginOtpVerifyRequest req) {
-        return ResponseEntity.ok(twoFactorAuthService.verifyLoginOtp(req.email(), req.otp()));
+    public ResponseEntity<AuthResponse> login2faVerify(
+            @Valid @RequestBody LoginOtpVerifyRequest req) {
+
+        return ResponseEntity.ok(
+                twoFactorAuthService.verifyLoginOtp(req.email(), req.otp())
+        );
     }
 
-    // Generic 2FA login using OTPService + AuthService.issueTokensForUser
+    // Generic OTP-based login
     @PostMapping("/login/2fa")
     public ResponseEntity<AuthResponse> login2FA(@Valid @RequestBody OtpLoginRequest req) {
+
         otpService.validateOtp(req.email(), req.otp(), "LOGIN_2FA");
-        AuthResponse response = authService.issueTokensForUser(req.email());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                authService.issueTokensForUser(req.email())
+        );
     }
 
-    // ---------------- FORGOT PASSWORD (OTP) ----------------
-
+    // =====================================================================================
+    // FORGOT + RESET PASSWORD
+    // =====================================================================================
     @PostMapping("/forgot-password")
     public ResponseEntity<String> forgotPassword(@Valid @RequestBody ForgotPasswordRequest req) {
+
         User user = userRepository.findByEmailIgnoreCase(req.email())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         otpService.sendPasswordResetOtp(user);
+
         return ResponseEntity.ok("OTP sent.");
     }
 
@@ -181,6 +214,7 @@ public class AuthController {
         User user = userRepository.findByEmailIgnoreCase(req.email())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        // Fixed: your code uses passwordHash field
         user.setPasswordHash(passwordEncoder.encode(req.newPassword()));
         userRepository.save(user);
 
@@ -189,19 +223,30 @@ public class AuthController {
         return ResponseEntity.ok("Password reset successful");
     }
 
-    // ---------------- FRAUD LOGIN OTP ----------------
-
+    // =====================================================================================
+    // FRAUD LOGIN OTP FLOW
+    // =====================================================================================
     @PostMapping("/login-fraud/verify")
-    public ResponseEntity<AuthResponse> verifyFraudOtp(@Valid @RequestBody FraudOtpVerifyRequest req) {
+    public ResponseEntity<AuthResponse> verifyFraudOtp(
+            @Valid @RequestBody FraudOtpVerifyRequest req) {
+
         fraudOtpService.validateFraudOtp(req.email(), req.otp());
-        AuthResponse response = authService.issueTokensForUser(req.email());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(authService.issueTokensForUser(req.email()));
     }
 
     @PostMapping("/login/fraud-verify")
-    public ResponseEntity<AuthResponse> fraudVerify(@Valid @RequestBody FraudOtpRequest req) {
+    public ResponseEntity<AuthResponse> fraudVerify(
+            @Valid @RequestBody FraudOtpRequest req) {
+
         otpService.validateOtp(req.email(), req.otp(), "FRAUD_VERIFY");
-        AuthResponse response = authService.issueTokensForUser(req.email());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(authService.issueTokensForUser(req.email()));
+    }
+
+    @PostMapping("/logout-all")
+    public ResponseEntity<String> logoutAll(
+            @RequestHeader("X-User-Id") Long userId) {
+
+        authService.logoutAll(userId);
+        return ResponseEntity.ok("All sessions logged out successfully");
     }
 }

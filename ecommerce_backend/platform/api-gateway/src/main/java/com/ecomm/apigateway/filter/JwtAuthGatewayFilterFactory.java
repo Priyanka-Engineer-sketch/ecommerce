@@ -161,7 +161,7 @@ public class JwtAuthGatewayFilterFactory extends AbstractGatewayFilterFactory<Jw
     private JWTClaimsSet verifyWithJwks(String token, KeyFamily family) throws Exception {
         if (!notBlank(jwksUri)) throw new IllegalStateException("JWKS URI not configured");
         var processor = (family == KeyFamily.RSA) ? getOrBuildRsaProcessor() : getOrBuildEcProcessor();
-        return processor.process(token, null);
+        return processor.process(SignedJWT.parse(token), null);
     }
 
     private synchronized ConfigurableJWTProcessor<SecurityContext> getOrBuildRsaProcessor()

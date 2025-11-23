@@ -23,21 +23,24 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    // ⬅ from security-common module
     private final JwtAuthFilter jwtAuthFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
-                // --- Stateless JWT app ---
+                // --- Disable CSRF for JWT stateless ---
                 .csrf(AbstractHttpConfigurer::disable)
+
+                // --- CORS from gateway / frontend ---
                 .cors(Customizer.withDefaults())
+
+                // --- JWT = always stateless ---
                 .sessionManagement(sm ->
                         sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
 
-                // --- Consistent JSON errors (401 / 403) ---
+                // --- Universal JSON error response ---
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((req, res, e) ->
                                 writeJson(res, HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized"))
@@ -45,36 +48,25 @@ public class SecurityConfig {
                                 writeJson(res, HttpServletResponse.SC_FORBIDDEN, "Forbidden"))
                 )
 
-                // --- Authorization rules ---
+                // --------------------------
+                // AUTHORIZATION RULES
+                // --------------------------
                 .authorizeHttpRequests(auth -> auth
 
-                        // health/info for k8s or monitoring
+                        // Actuator health check for k8s, gateway, monitoring
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
 
-                        // NOTE: inside order-service controller base path is "/orders"
-                        // Gateway adds "/api" and strips it before forwarding.
-                        // So we always match on "/orders/**" here.
+                        // Order Service Rules
+                        .requestMatchers(HttpMethod.POST, "/orders/**").hasRole("USER")
+                        .requestMatchers(HttpMethod.GET, "/orders/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/orders/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/orders/**").hasAnyRole("USER", "ADMIN")
 
-                        // Create order -> only authenticated USER role
-                        .requestMatchers(HttpMethod.POST, "/orders/**")
-                        .hasRole("USER")
-
-                        // Read orders -> both USER and ADMIN (controller does owner checks)
-                        .requestMatchers(HttpMethod.GET, "/orders/**")
-                        .hasAnyRole("USER", "ADMIN")
-
-                        // Update & cancel -> USER + ADMIN, but business rules are in controller/service
-                        .requestMatchers(HttpMethod.PUT, "/orders/**")
-                        .hasAnyRole("USER", "ADMIN")
-
-                        .requestMatchers(HttpMethod.DELETE, "/orders/**")
-                        .hasAnyRole("USER", "ADMIN")
-
-                        // Anything else must be authenticated
+                        // Remaining APIs → must be authenticated
                         .anyRequest().authenticated()
                 )
 
-                // --- Attach shared JWT filter before username/password filter ---
+                // --- Custom shared JWT filter (from shared auth module) ---
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

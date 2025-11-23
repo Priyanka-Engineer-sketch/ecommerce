@@ -15,4 +15,6 @@ public interface AuthService {
     AuthResponse refresh(String refreshToken);
 
     AuthResponse issueTokensForUser(String email);
+
+    void logoutAll(Long userId);
 }
