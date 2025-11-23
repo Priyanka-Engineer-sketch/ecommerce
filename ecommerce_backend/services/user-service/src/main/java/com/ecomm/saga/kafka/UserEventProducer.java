@@ -68,7 +68,7 @@ public class UserEventProducer {
     // ============================
     // SECURITY EVENTS
     // ============================
-    public void sendPasswordResetEvent(User user) {
+    public void sendPasswordReset(User user) {
         UserPasswordResetEvent event = new UserPasswordResetEvent(
                 eventId(), user.getId(), user.getEmail(), System.currentTimeMillis()
         );
@@ -104,5 +104,19 @@ public class UserEventProducer {
                 eventId(), to, template, payload, System.currentTimeMillis()
         );
         kafka.send(SagaKafkaTopics.USER_EMAIL_OUTBOX, to, event);
+    }
+
+    // ✅ NEW: generic fraud alert with score + reason (for your existing usage)
+    public void sendFraudAlert(User user, int riskScore, String reason) {
+        UserFraudAlertEvent event = new UserFraudAlertEvent(
+                eventId(),
+                user.getId(),
+                user.getEmail(),
+                riskScore,
+                reason,
+                System.currentTimeMillis()
+        );
+        kafka.send(SagaKafkaTopics.USER_FRAUD_ALERT, user.getId().toString(), event);
+        log.info("EVENT → USER_FRAUD_ALERT {}", event);
     }
 }

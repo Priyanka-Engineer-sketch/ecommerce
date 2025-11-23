@@ -42,7 +42,7 @@ public class AsyncLoginSideEffects {
     public void handleSuccessfulLogin(User u, int riskCounter, int riskScore, String ip, String userAgent) {
         try {
             emailService.sendLoginNotification(u, ip, userAgent);
-            userEventProducer.sendLoginEvent(u, ip, userAgent, riskScore);
+            userEventProducer.sendUserLoginSuccessEvent(u, ip, userAgent);
             auditService.log(u, "LOGIN_SUCCESS", "RiskScore=" + riskCounter, ip, userAgent);
         } catch (Exception ex) {
             // log only

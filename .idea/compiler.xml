@@ -9,9 +9,8 @@
         <outputRelativeToContentRoot value="true" />
         <module name="config-server" />
         <module name="discovery-server" />
-        <module name="saga-kafka-lib" />
       </profile>
-      <profile name="Annotation profile for order-service" enabled="true">
+      <profile name="Annotation profile for ecommerce" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
@@ -19,9 +18,11 @@
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.42/lombok-1.18.42.jar" />
         </processorPath>
         <module name="api-gateway" />
-        <module name="order-service" />
         <module name="user-service" />
+        <module name="order-service" />
         <module name="inventory-service" />
+        <module name="security-common" />
+        <module name="saga-kafka-lib" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel target="21" />

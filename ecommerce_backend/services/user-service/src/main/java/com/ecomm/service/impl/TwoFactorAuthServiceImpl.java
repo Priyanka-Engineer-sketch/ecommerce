@@ -92,7 +92,7 @@ public class TwoFactorAuthServiceImpl implements TwoFactorAuthService {
         otpRepo.save(token);
 
         // issue JWT tokens for successful login
-        return authServiceImpl.issueTokensForUser(user);
+        return authServiceImpl.issueTokensForUser(user.getEmail());
     }
 
     private String generateOtp() {

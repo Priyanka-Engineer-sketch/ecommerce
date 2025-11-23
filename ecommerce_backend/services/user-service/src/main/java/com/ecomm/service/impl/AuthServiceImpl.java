@@ -213,6 +213,13 @@ public class AuthServiceImpl implements AuthService {
         return buildTokens(user);
     }
 
+    @Override
+    public AuthResponse issueTokensForUser(String email) {
+        User user = userRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return buildTokens(user);
+    }
+
     // =====================================================================================
     // LOGOUT ALL
     // =====================================================================================
