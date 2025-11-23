@@ -12,13 +12,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/public/users")
+@RequestMapping("/api/users/public")
 @RequiredArgsConstructor
 public class PublicUserController {
 
     private final UserRepository userRepository;
 
-    @GetMapping("/{username}")
+    @GetMapping("/{username:.+}")
     public ResponseEntity<PublicUserProfileResponse> getPublicProfile(
             @PathVariable String username
     ) {

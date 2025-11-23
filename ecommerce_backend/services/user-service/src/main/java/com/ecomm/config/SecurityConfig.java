@@ -50,7 +50,7 @@ public class SecurityConfig {
             // ---------------------------
             // USER PUBLIC (if needed)
             // ---------------------------
-            "/api/public/**",
+            "/api/users/public/**",
 
             // ---------------------------
             // OAUTH2 (future)
