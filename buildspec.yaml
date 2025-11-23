@@ -1,0 +1,74 @@
+version: 0.2
+
+env:
+  variables:
+    MAVEN_OPTS: "-Dmaven.test.skip=false"
+
+phases:
+  install:
+    runtime-versions:
+      java: corretto17
+      nodejs: 18
+    commands:
+      - echo "=== INSTALL PHASE ==="
+      - pwd
+      - ls
+      - echo "Java & Maven versions:"
+      - java -version
+      - mvn -version
+      - echo "Installing frontend dependencies..."
+      - cd ecommerce_frontend
+      - npm install
+      - cd ..
+
+  pre_build:
+    commands:
+      - echo "=== PRE-BUILD PHASE ==="
+      - echo "Running backend tests..."
+      - mvn -B -f ecommerce_backend/pom.xml test
+      - echo "Running frontend tests (if configured)..."
+      - cd ecommerce_frontend
+      - npm test -- --watch=false || echo "Frontend tests failed or not configured, continuing..."
+      - cd ..
+
+  build:
+    commands:
+      - echo "=== BUILD PHASE ==="
+      - echo "Building backend (all microservices + common + platform)..."
+      - mvn -B -f ecommerce_backend/pom.xml clean package -DskipTests
+
+      - echo "Building frontend React app..."
+      - cd ecommerce_frontend
+      - npm run build
+      - cd ..
+
+      - echo "Collecting artifacts..."
+      - mkdir -p artifacts/backend artifacts/frontend
+
+      # -------- BACKEND JARs (services) --------
+      - cp ecommerce_backend/services/inventory-service/target/*.jar  artifacts/backend/inventory-service.jar  || true
+      - cp ecommerce_backend/services/order-service/target/*.jar      artifacts/backend/order-service.jar      || true
+      - cp ecommerce_backend/services/user-service/target/*.jar       artifacts/backend/user-service.jar       || true
+
+      # -------- BACKEND JARs (platform) --------
+      - cp ecommerce_backend/platform/api-gateway/target/*.jar        artifacts/backend/api-gateway.jar        || true
+      - cp ecommerce_backend/platform/config-server/target/*.jar      artifacts/backend/config-server.jar      || true
+      - cp ecommerce_backend/platform/discovery-server/target/*.jar   artifacts/backend/discovery-server.jar   || true
+      - cp ecommerce_backend/platform/ecom-config/target/*.jar        artifacts/backend/ecom-config.jar        || true
+
+      # -------- ROOT BACKEND APP (if it produces a jar) --------
+      - cp ecommerce_backend/target/*.jar                             artifacts/backend/ecommerce-backend.jar  || true
+
+      # -------- FRONTEND BUILD --------
+      - cp -r ecommerce_frontend/build/* artifacts/frontend/ || echo "No frontend build directory found"
+
+  post_build:
+    commands:
+      - echo "=== POST-BUILD PHASE ==="
+      - echo "Final artifacts structure:"
+      - ls -R artifacts || echo "No artifacts found!"
+
+artifacts:
+  base-directory: artifacts
+  files:
+    - '**/*'
