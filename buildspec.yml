@@ -3,6 +3,10 @@ version: 0.2
 env:
   variables:
     MAVEN_OPTS: "-Dmaven.test.skip=false"
+    # Replace these three with your real values OR override them in the CodeBuild console
+    AWS_ACCOUNT_ID: "269825205626"
+    AWS_REGION: "us-east-1"
+    ECR_REPO_NAME: "ecommerce_app"
 
 phases:
   install:
@@ -61,6 +65,22 @@ phases:
 
       # -------- FRONTEND BUILD --------
       - cp -r ecommerce_frontend/build/* artifacts/frontend/ || echo "No frontend build directory found"
+
+      # ==============================
+      #    DOCKER BUILD & PUSH TO ECR
+      # ==============================
+      - echo "Logging in to Amazon ECR..."
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+
+      - echo "Building Docker image for backend..."
+      # Assumes your Dockerfile is inside ecommerce_backend/
+      - docker build -t $ECR_REPO_NAME ./ecommerce_backend
+
+      - echo "Tagging Docker image..."
+      - docker tag $ECR_REPO_NAME:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO_NAME:latest
+
+      - echo "Pushing Docker image to ECR..."
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO_NAME:latest
 
   post_build:
     commands:
