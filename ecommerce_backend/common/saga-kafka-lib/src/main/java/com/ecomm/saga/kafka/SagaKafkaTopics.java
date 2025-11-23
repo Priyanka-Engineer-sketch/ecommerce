@@ -30,4 +30,6 @@ public final class SagaKafkaTopics {
     public static final String USER_LOGOUT_ALL           = "user.logout.all.v1";
 
     public static final String USER_EMAIL_OUTBOX         = "user.email.outbox.v1";
+
+    public static final String USER_FRAUD_ALERT          = "user.fraud.alert";
 }
