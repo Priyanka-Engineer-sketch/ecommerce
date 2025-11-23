@@ -7,7 +7,7 @@ env:
 phases:
   install:
     runtime-versions:
-      java: corretto17
+      java: corretto21
       nodejs: 18
     commands:
       - echo "=== INSTALL PHASE ==="
