@@ -14,7 +14,7 @@ phases:
   pre_build:
     commands:
       - echo "Entering config-server module..."
-      - cd platform/config-server     # IMPORTANT: Correct folder
+      - cd ecommerce_backend/platform/config-server     # IMPORTANT: Correct folder
       - echo "Running Maven build..."
       - mvn clean install
       - echo "Logging in to Amazon ECR..."
@@ -47,5 +47,5 @@ phases:
 artifacts:
   files:
     - imagedefinitions.json
-    - platform/config-server/target/config-server.jar
+    - ecommerce_backend/platform/config-server/target/config-server.jar
 
