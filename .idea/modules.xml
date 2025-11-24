@@ -2,9 +2,12 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/ecommerce_backend/ecommerce.iml" filepath="$PROJECT_DIR$/ecommerce_backend/ecommerce.iml" />
-      <module fileurl="file://$PROJECT_DIR$/ecommerce_frontend/ecommerce_frontend.iml" filepath="$PROJECT_DIR$/ecommerce_frontend/ecommerce_frontend.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/ecommerce.iml" filepath="$PROJECT_DIR$/.idea/ecommerce.iml" />
+      <module fileurl="file://$PROJECT_DIR$/ecommerce_backend/services/inventory-service/inventory-service.iml" filepath="$PROJECT_DIR$/ecommerce_backend/services/inventory-service/inventory-service.iml" />
       <module fileurl="file://$PROJECT_DIR$/ecommerce_backend/services/order-service/order-service.iml" filepath="$PROJECT_DIR$/ecommerce_backend/services/order-service/order-service.iml" />
+      <module fileurl="file://$PROJECT_DIR$/ecommerce_backend/services/product-service/product-service.iml" filepath="$PROJECT_DIR$/ecommerce_backend/services/product-service/product-service.iml" />
+      <module fileurl="file://$PROJECT_DIR$/ecommerce_backend/common/saga-kafka-lib/saga-kafka-lib.iml" filepath="$PROJECT_DIR$/ecommerce_backend/common/saga-kafka-lib/saga-kafka-lib.iml" />
+      <module fileurl="file://$PROJECT_DIR$/ecommerce_backend/services/shipping-service/shipping-service.iml" filepath="$PROJECT_DIR$/ecommerce_backend/services/shipping-service/shipping-service.iml" />
     </modules>
   </component>
 </project>
