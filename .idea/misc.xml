@@ -4,21 +4,12 @@
   <component name="MavenProjectsManager">
     <option name="originalFiles">
       <list>
-        <option value="$PROJECT_DIR$/ecommerce_backend/services/user-service/pom.xml" />
-        <option value="$PROJECT_DIR$/config-server/pom.xml" />
-        <option value="$PROJECT_DIR$/ecommerce_backend/platform/config-server/pom.xml" />
-        <option value="$PROJECT_DIR$/ecommerce_backend/platform/api-gateway/pom.xml" />
-        <option value="$PROJECT_DIR$/ecommerce_backend/platform/discovery-server/pom.xml" />
         <option value="$PROJECT_DIR$/ecommerce_backend/pom.xml" />
-        <option value="$PROJECT_DIR$/ecommerce_backend/common/demo/pom.xml" />
-        <option value="$PROJECT_DIR$/ecommerce_backend/common/saga-kafka-lib/pom.xml" />
-        <option value="$PROJECT_DIR$/ecommerce_backend/services/order-service/pom.xml" />
-        <option value="$PROJECT_DIR$/ecommerce_backend/common/security-common/pom.xml" />
-        <option value="$PROJECT_DIR$/ecommerce_backend/services/inventory-service/pom.xml" />
+        <option value="$PROJECT_DIR$/ecommerce_backend/services/cart-service/pom.xml" />
       </list>
     </option>
   </component>
-  <component name="ProjectRootManager" version="2" languageLevel="JDK_21" project-jdk-name="25" project-jdk-type="JavaSDK">
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_25" default="true" project-jdk-name="25" project-jdk-type="JavaSDK">
     <output url="file://$PROJECT_DIR$/out" />
   </component>
 </project>
