@@ -24,14 +24,14 @@ phases:
   pre_build:
     commands:
       - echo "===== PRE_BUILD PHASE ====="
-      - cd ecommerce_backend/platform/discovery-server
+      - cd ecommerce_backend/services/user-service
       - echo "Now in:"
       - pwd
       - echo "Running Maven build..."
       - mvn clean package -DskipTests
       - echo "Logging in to Amazon ECR..."
       - aws --version
-      - REPOSITORY_URI=269825205626.dkr.ecr.ap-south-1.amazonaws.com/discovery_server
+      - REPOSITORY_URI=269825205626.dkr.ecr.ap-south-1.amazonaws.com/user_service
       - aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin $REPOSITORY_URI
       - IMAGE_TAG=build-$(echo $CODEBUILD_BUILD_ID | awk -F":" '{print $2}')
       - export REPOSITORY_URI IMAGE_TAG
@@ -51,7 +51,7 @@ phases:
       - docker push $REPOSITORY_URI:latest
       - docker push $REPOSITORY_URI:$IMAGE_TAG
       - echo "Generating imagedefinitions.json..."
-      - DOCKER_CONTAINER_NAME=discovery_server
+      - DOCKER_CONTAINER_NAME=user_service
       - printf '[{"name":"%s","imageUri":"%s"}]' "$DOCKER_CONTAINER_NAME" "$REPOSITORY_URI:$IMAGE_TAG" > imagedefinitions.json
       - echo "imagedefinitions.json:"
       - cat imagedefinitions.json
@@ -60,4 +60,4 @@ phases:
 artifacts:
   files:
     - imagedefinitions.json
-    - ecommerce_backend/platform/discovery-server/target/discovery-server.jar
+    - ecommerce_backend/services/user-service/target/user_service.jar
