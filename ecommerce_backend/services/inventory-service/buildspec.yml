@@ -24,10 +24,10 @@ phases:
   pre_build:
     commands:
       - echo "===== PRE_BUILD PHASE ====="
-      - cd ecommerce_backend/services/inventory-service
-      - echo "Now in:"
-      - pwd
-      - echo "Running Maven build..."
+      - echo "Building all backend modules so that shared libs get installed..."
+      - cd ecommerce_backend
+      - mvn clean install -DskipTests
+      - cd services/inventory-service         
       - mvn clean package -DskipTests
       - echo "Logging in to Amazon ECR..."
       - aws --version
