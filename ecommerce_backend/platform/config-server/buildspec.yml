@@ -41,4 +41,11 @@ phases:
       - docker push $REPOSITORY_URI:$IMAGE_TAG
       - echo "Generating imagedefinitions.json..."
       - DOCKER_CONTAINER_NAME=configserver_app
-      - printf '[{"name":"%s","imageUri":"%s"}]' $DOCKER_CONTAINER_NAME
+      - printf '[{"name":"%s","imageUri":"%s"}]' $DOCKER_CONTAINER_NAME $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+      - mv imagedefinitions.json ../../..   # Move to repo root for artifacts
+
+artifacts:
+  files:
+    - imagedefinitions.json
+    - platform/config-server/target/config-server.jar
+
