@@ -1,5 +1,6 @@
 package com.ecomm.invoice.kafka;
 
+import com.ecomm.events.order.OrderCommunicationEvent;
 import com.ecomm.events.order.OrderPlacedEvent;
 import com.ecomm.invoice.domain.Invoice;
 import com.ecomm.invoice.service.InvoiceService;
@@ -20,8 +21,8 @@ public class InvoiceEmailListener {
     private final JavaMailSender mailSender;
 
     @KafkaListener(
-            topics = "order.placed.v1",
-            groupId = "invoice-service"
+            topics = "order.placed.v1,user.email.outbox.v1",
+            groupId = "invoice-service,notification-service"
     )
     public void handleOrderPlaced(OrderPlacedEvent event) {
         log.info("Received OrderPlacedEvent for invoice generation/email: {}", event);
@@ -72,6 +73,49 @@ public class InvoiceEmailListener {
 
         } catch (Exception ex) {
             log.error("Failed to generate/send invoice email for order {}: {}",
+                    event.getOrderId(), ex.getMessage(), ex);
+        }
+    }
+
+    public void handleOrderCommunication(OrderCommunicationEvent event) {
+        log.info("Received OrderCommunicationEvent for email: {}", event);
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+
+            helper.setTo(event.getToEmail());
+            helper.setSubject(event.getSubject());
+
+            StringBuilder body = new StringBuilder();
+            body.append("Hi ").append(event.getToEmail()).append(",\n\n");
+            body.append("Your order #").append(event.getOrderId()).append(" is confirmed.\n\n");
+
+            body.append("Order Summary:\n");
+            event.getOrderSummary().getItemNames()
+                    .forEach(n -> body.append(" - ").append(n).append("\n"));
+
+            body.append("\nTotal Amount: ₹")
+                    .append(event.getOrderSummary().getTotalAmount()).append("\n");
+
+            if (event.getRecommendations() != null && !event.getRecommendations().isEmpty()) {
+                body.append("\nRecommended for you:\n");
+                event.getRecommendations().forEach(r ->
+                        body.append(" - ")
+                                .append(r.getName())
+                                .append(" (₹").append(r.getPrice()).append(")\n")
+                );
+            }
+
+            body.append("\nThank you for shopping with us!\n");
+
+            helper.setText(body.toString());
+
+            mailSender.send(message);
+            log.info("Order confirmation email sent for order {}", event.getOrderId());
+
+        } catch (Exception ex) {
+            log.error("Failed to send order confirmation email for order {}: {}",
                     event.getOrderId(), ex.getMessage(), ex);
         }
     }
