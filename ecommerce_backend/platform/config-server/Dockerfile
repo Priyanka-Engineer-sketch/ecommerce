@@ -4,7 +4,7 @@ FROM amazoncorretto:21-alpine
 WORKDIR /app
 
 # JAR CodeBuild se aayega (target/config-server.jar)
-COPY target/config-server.jar app.jar
+COPY target/*.jar app.jar
 
 
 # Config server port
