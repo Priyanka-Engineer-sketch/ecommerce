@@ -55,7 +55,11 @@ public class SecurityConfig {
 
                         // Actuator health check for k8s, gateway, monitoring
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-
+                        .requestMatchers(
+                                "/v3/api-docs/**",
+                                "/swagger-ui.html",
+                                "/swagger-ui/**"
+                        ).permitAll()
                         // Order Service Rules
                         .requestMatchers(HttpMethod.POST, "/orders/**").hasRole("USER")
                         .requestMatchers(HttpMethod.GET, "/orders/**").hasAnyRole("USER", "ADMIN")

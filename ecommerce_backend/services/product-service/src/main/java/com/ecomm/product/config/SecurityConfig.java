@@ -43,7 +43,11 @@ public class SecurityConfig {
 
                         // Health endpoints
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-
+                        .requestMatchers(
+                                "/v3/api-docs/**",
+                                "/swagger-ui.html",
+                                "/swagger-ui/**"
+                        ).permitAll()
                         // PRODUCT CRUD — ADMIN / SELLER ONLY
                         .requestMatchers(HttpMethod.POST, "/products/**").hasAnyRole("ADMIN", "SELLER")
                         .requestMatchers(HttpMethod.PUT, "/products/**").hasAnyRole("ADMIN", "SELLER")
