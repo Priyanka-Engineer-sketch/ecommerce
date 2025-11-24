@@ -1,5 +1,7 @@
 package com.ecomm.events.order;
 
+import com.ecomm.events.saga.SagaStatus;
+
 /**
  * Generic reply from any saga participant (inventory, payment, shipping)
  * back to the orchestrator.
@@ -11,5 +13,6 @@ public record SagaReplyEvent(
         Long orderId,
         SagaStep step,
         boolean success,
+        SagaStatus status,
         String errorMessage
 ) {}

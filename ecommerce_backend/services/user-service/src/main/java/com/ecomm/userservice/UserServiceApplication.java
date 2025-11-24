@@ -9,7 +9,9 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
-@SpringBootApplication(scanBasePackages = "com.ecomm")
+@SpringBootApplication(scanBasePackages = {
+        "com.ecomm"
+})
 @EnableJpaRepositories(basePackages = "com.ecomm")
 @EntityScan(basePackages = "com.ecomm")
 @EnableCaching

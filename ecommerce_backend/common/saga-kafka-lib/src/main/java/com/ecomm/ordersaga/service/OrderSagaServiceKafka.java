@@ -11,13 +11,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class OrderSagaService {
+public class OrderSagaServiceKafka {
 
     private final OrderSagaRepository sagaRepository;
     private final KafkaTemplate<String, Object> sagaKafkaTemplate;
 
-    public OrderSagaService(OrderSagaRepository sagaRepository,
-                            KafkaTemplate<String, Object> sagaKafkaTemplate) {
+    public OrderSagaServiceKafka(OrderSagaRepository sagaRepository,
+                                 KafkaTemplate<String, Object> sagaKafkaTemplate) {
         this.sagaRepository = sagaRepository;
         this.sagaKafkaTemplate = sagaKafkaTemplate;
     }

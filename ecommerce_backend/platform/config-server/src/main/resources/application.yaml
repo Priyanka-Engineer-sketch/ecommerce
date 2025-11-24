@@ -5,6 +5,10 @@ spring:
   application:
     name: config-server
 
+  # profile is optional here; git backend is default when server.git is configured
+  # profiles:
+  #   active: git
+
   security:
     user:
       name: ${CONFIG_USER:config}
@@ -13,21 +17,25 @@ spring:
   cloud:
     config:
       server:
-        # Use Git backend (HTTPS + PAT)
         git:
+          # 1️⃣ Make sure this URL is **complete and correct**
           uri: ${CONFIG_GIT_URI:https://github.com/Priyanka-Engineer-sketch/ecom-config.git}
-          username: ${CONFIG_GIT_USERNAME:}        # can be blank for PAT-only auth
-          password: ${CONFIG_GIT_PASSWORD:}        # GitHub PAT
-          default-label: ${CONFIG_GIT_BRANCH:main} # IMPORTANT: use 'main', not 'master'
+          username: ${CONFIG_GIT_USERNAME:}
+          password: ${CONFIG_GIT_PASSWORD:}
+          default-label: ${CONFIG_GIT_BRANCH:main}
+          # 2️⃣ Optional: path inside repo where app configs are stored
+          #    If you keep configs in root, leave this blank or remove it.
+          #    If you use a folder like "config", then set CONFIG_GIT_PATHS=config
           search-paths: ${CONFIG_GIT_PATHS:}
           clone-on-start: true
           skip-ssl-validation: ${CONFIG_GIT_SKIP_SSL:false}
-          timeout: ${CONFIG_GIT_TIMEOUT:20}
-          force-pull: ${CONFIG_GIT_FORCE_PULL:true}
+          timeout: ${CONFIG_GIT_TIMEOUT:5}
+          refresh-rate: 300
+          force-pull: ${CONFIG_GIT_FORCE_PULL:false}
           delete-untracked-branches: true
 
 encrypt:
-  key: ${CONFIG_ENCRYPT_KEY:}   # supply via secret; do NOT commit plaintext
+  key: ${CONFIG_ENCRYPT_KEY:}
 
 logging:
   level:
@@ -53,4 +61,3 @@ eureka:
       defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka}
   instance:
     prefer-ip-address: true
-

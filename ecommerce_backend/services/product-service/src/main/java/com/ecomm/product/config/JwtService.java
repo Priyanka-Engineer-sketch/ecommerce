@@ -1,8 +1,9 @@
-package com.ecomm.product.config;
+package com.ecomm.config.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.DecodingException;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
@@ -13,16 +14,15 @@ import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 public class JwtService {
 
-    @Value("${jwt.secret}")
+    // ✅ 1) Try property security.jwt.hmac-secret
+    // ✅ 2) If missing, fallback to env var JWT_ACCESS_SECRET
+    @Value("${security.jwt.hmac-secret:${JWT_ACCESS_SECRET:}}")
     private String secret;
 
     private Key key;
@@ -30,19 +30,23 @@ public class JwtService {
     @PostConstruct
     public void init() {
         if (secret == null || secret.isBlank()) {
-            throw new IllegalStateException("jwt.secret must be configured for order-service");
+            throw new IllegalStateException(
+                    "JWT secret is not configured. " +
+                            "Set either 'security.jwt.hmac-secret' property or 'JWT_ACCESS_SECRET' env variable."
+            );
         }
 
         byte[] keyBytes;
+
         try {
-            // if secret is base64
+            // Try as Base64 first
             keyBytes = Decoders.BASE64.decode(secret);
-        } catch (IllegalArgumentException e) {
-            // treat as plain text
+        } catch (DecodingException ex) {
+            // Fallback: treat as plain text
             keyBytes = secret.getBytes(StandardCharsets.UTF_8);
         }
 
-        // HS256 → at least 32 bytes
+        // HS256 → at least 32 bytes (256 bits)
         if (keyBytes.length < 32) {
             keyBytes = Arrays.copyOf(keyBytes, 32);
         }
@@ -62,7 +66,6 @@ public class JwtService {
     }
 
     public String extractUserId(String token) {
-        // user-service puts userId as JWT subject
         return extractAllClaims(token).getSubject();
     }
 
@@ -86,9 +89,8 @@ public class JwtService {
     @SuppressWarnings("unchecked")
     public Collection<? extends GrantedAuthority> extractAuthorities(String token) {
         Claims claims = extractAllClaims(token);
-
-        // user-service puts: "roles": ["ROLE_USER","ROLE_ADMIN"]
         Object roles = claims.get("roles");
+
         if (roles instanceof List<?> list) {
             return list.stream()
                     .filter(String.class::isInstance)

@@ -1,4 +1,4 @@
-package com.ecomm.config.security;
+package com.ecomm.payment.config;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

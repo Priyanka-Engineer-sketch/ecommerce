@@ -31,7 +31,7 @@ public class Product {
     @Column(length = 2000)
     private String description;
 
-    @Column(nullable = false, scale = 2, precision = 15)
+    @Column(nullable = false)
     private Double price;
 
     @Column(nullable = false)

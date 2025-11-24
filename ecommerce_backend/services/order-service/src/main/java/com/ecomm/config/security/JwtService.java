@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.io.DecodingException;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,7 +20,7 @@ import java.util.stream.Collectors;
 @Service
 public class JwtService {
 
-    @Value("${jwt.secret}")
+    @Value("${security.jwt.hmac-secret}")
     private String secret;
 
     private Key key;
@@ -27,19 +28,19 @@ public class JwtService {
     @PostConstruct
     public void init() {
         if (secret == null || secret.isBlank()) {
-            throw new IllegalStateException("jwt.secret must be configured for order-service");
+            throw new IllegalStateException("security.jwt.hmac-secret must be configured for order-service");
         }
 
         byte[] keyBytes;
         try {
-            // if secret is base64
+            // Try as Base64 first
             keyBytes = Decoders.BASE64.decode(secret);
-        } catch (IllegalArgumentException e) {
-            // treat as plain text
+        } catch (DecodingException ex) {
+            // Not valid Base64 → treat as plain text
             keyBytes = secret.getBytes(StandardCharsets.UTF_8);
         }
 
-        // HS256 → at least 32 bytes
+        // HS256 → need at least 32 bytes
         if (keyBytes.length < 32) {
             keyBytes = Arrays.copyOf(keyBytes, 32);
         }

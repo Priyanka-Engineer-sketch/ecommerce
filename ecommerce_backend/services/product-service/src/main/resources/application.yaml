@@ -1,15 +1,7 @@
 spring:
   application:
     name: product-service
-
   profiles:
     active: dev
-
   config:
-    import: "optional:configserver:http://localhost:8888/product-service/dev"
-    # If you use the standard pattern (no explicit path), you can also do:
-    # import: "optional:configserver:http://localhost:8888"
-
-# Optional: only for local fallback if Config Server is down
-#server:
-#  port: 8082
+    import: "optional:configserver:"
