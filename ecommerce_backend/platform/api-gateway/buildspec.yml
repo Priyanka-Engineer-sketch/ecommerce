@@ -31,7 +31,7 @@ phases:
       - mvn clean package -DskipTests
       - echo "Logging in to Amazon ECR..."
       - aws --version
-      - REPOSITORY_URI=269825205626.dkr.ecr.ap-south-1.amazonaws.com/configserver_app
+      - REPOSITORY_URI=269825205626.dkr.ecr.ap-south-1.amazonaws.com/apigateway_server
       - aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin $REPOSITORY_URI
       - IMAGE_TAG=build-$(echo $CODEBUILD_BUILD_ID | awk -F":" '{print $2}')
       - export REPOSITORY_URI IMAGE_TAG
@@ -60,4 +60,4 @@ phases:
 artifacts:
   files:
     - imagedefinitions.json
-    - ecommerce_backend/platform/api-gateway/target/config-server.jar
+    - ecommerce_backend/platform/api-gateway/target/api-gateway.jar
