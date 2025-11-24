@@ -57,7 +57,7 @@ public class Order {
     /**
      * Total amount of the order
      */
-    @Column(nullable = false, precision = 19, scale = 2)
+    @Column(nullable = false)
     private double totalAmount;
 
     @Enumerated(EnumType.STRING)

@@ -2,16 +2,19 @@ package com.ecomm.ordersaga.messaging;
 
 import com.ecomm.events.order.OrderSagaStartEvent;
 import com.ecomm.events.order.SagaReplyEvent;
-import com.ecomm.ordersaga.service.OrderSagaService;
+import com.ecomm.ordersaga.service.OrderSagaServiceKafka;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 @Component
 public class OrderSagaListeners {
 
-    private final OrderSagaService sagaService;
+    @Autowired
+    private final OrderSagaServiceKafka sagaService;
 
-    public OrderSagaListeners(OrderSagaService sagaService) {
+    public OrderSagaListeners(OrderSagaServiceKafka sagaService) {
         this.sagaService = sagaService;
     }
 

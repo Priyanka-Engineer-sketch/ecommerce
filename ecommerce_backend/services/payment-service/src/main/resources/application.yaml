@@ -1,10 +1,8 @@
 spring:
   application:
     name: payment-service
-
   profiles:
     active: dev
-
   config:
     # config-server at 8888, profile dev, file payment-service-dev.yml
-    import: "optional:configserver"
+    import: "optional:configserver:"
