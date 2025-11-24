@@ -1,0 +1,47 @@
+version: 0.2
+
+env:
+  variables:
+    AWS_REGION: ap-south-1
+    SERVICE_NAME: product-service
+
+phases:
+  install:
+    runtime-versions:
+      java: corretto21
+      docker: 20
+    commands:
+      - echo "Installing dependencies for $SERVICE_NAME..."
+      - cd ecommerce_backend
+      - ./mvnw -v
+
+  pre_build:
+    commands:
+      - echo "Logging in to Amazon ECR..."
+      - ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+      - ECR_URI="$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+      - REPO_NAME="ecommerce-${SERVICE_NAME}"
+      - IMAGE_TAG=${CODEBUILD_RESOLVED_SOURCE_VERSION:0:7}
+      - echo "Account: $ACCOUNT_ID"
+      - echo "Repo: $REPO_NAME"
+      - echo "Image tag: $IMAGE_TAG"
+      - aws ecr describe-repositories --repository-names "$REPO_NAME" >/dev/null 2>&1 || \
+          aws ecr create-repository --repository-name "$REPO_NAME" >/dev/null
+      - aws ecr get-login-password --region $AWS_REGION | \
+          docker login --username AWS --password-stdin $ECR_URI
+      - export ACCOUNT_ID ECR_URI REPO_NAME IMAGE_TAG
+
+  build:
+    commands:
+      - echo "Building JAR for $SERVICE_NAME..."
+      - cd ecommerce_backend
+      - ./mvnw clean package -pl services/${SERVICE_NAME} -am -DskipTests
+      - echo "Building Docker image for $SERVICE_NAME..."
+      - docker build -t $ECR_URI/$REPO_NAME:$IMAGE_TAG services/${SERVICE_NAME}
+      - echo "Pushing Docker image..."
+      - docker push $ECR_URI/$REPO_NAME:$IMAGE_TAG
+
+artifacts:
+  files:
+    - 'ecommerce_backend/services/product-service/target/*.jar'
+  discard-paths: no
