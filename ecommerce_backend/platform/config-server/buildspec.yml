@@ -1,31 +1,16 @@
 version: 0.2
 
+env:
+  shell: bash
+
 phases:
   install:
     commands:
       - echo "===== INSTALL PHASE ====="
-      - echo "Current directory:"
+      - echo "PWD:"
       - pwd
-      - echo "Listing root:"
+      - echo "Listing current directory:"
       - ls
-
-      # Detect config-server module path
-      - |
-        if [ -d ecommerce_backend/platform/config-server ]; then
-          MODULE_DIR=ecommerce_backend/platform/config-server
-        elif [ -d platform/config-server ]; then
-          MODULE_DIR=platform/config-server
-        elif [ -d config-server ]; then
-          MODULE_DIR=config-server
-        else
-          echo "ERROR: config-server directory not found in repo."
-          echo "Contents of current directory:"
-          ls
-          exit 1
-        fi
-        echo "Using MODULE_DIR=$MODULE_DIR"
-        export MODULE_DIR
-
       - echo "Installing Java 21..."
       - yum remove -y java-17-amazon-corretto-headless || true
       - yum install -y java-21-amazon-corretto-devel
@@ -37,12 +22,10 @@ phases:
   pre_build:
     commands:
       - echo "===== PRE_BUILD PHASE ====="
-      - echo "MODULE_DIR is $MODULE_DIR"
-      - cd "$MODULE_DIR"
       - echo "Running Maven build in:"
       - pwd
+      - ls
       - mvn clean install
-
       - echo "Logging in to Amazon ECR..."
       - aws --version
       - REPOSITORY_URI=269825205626.dkr.ecr.ap-south-1.amazonaws.com/configserver_app
@@ -53,8 +36,6 @@ phases:
   build:
     commands:
       - echo "===== BUILD PHASE ====="
-      - echo "Build started on `date`"
-      - cd "$MODULE_DIR"
       - echo "Building Docker image from:"
       - pwd
       - docker build -t $REPOSITORY_URI:latest .
@@ -64,21 +45,17 @@ phases:
     commands:
       - echo "===== POST_BUILD PHASE ====="
       - echo "Build completed on `date`"
-      - cd "$MODULE_DIR"
       - echo "Pushing Docker images..."
       - docker push $REPOSITORY_URI:latest
       - docker push $REPOSITORY_URI:$IMAGE_TAG
-
       - echo "Generating imagedefinitions.json..."
       - DOCKER_CONTAINER_NAME=configserver_app
-      - printf '[{"name":"%s","imageUri":"%s"}]' $DOCKER_CONTAINER_NAME $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
-      - echo "imagedefinitions.json content:"
+      - printf '[{\"name\":\"%s\",\"imageUri\":\"%s\"}]' $DOCKER_CONTAINER_NAME $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
       - cat imagedefinitions.json
-
-      # Move imagedefinitions.json to repo root (CODEBUILD_SRC_DIR)
+      # imagedefinitions ko repo root me copy karo
       - cp imagedefinitions.json "$CODEBUILD_SRC_DIR"
 
 artifacts:
   files:
     - imagedefinitions.json
-    - '**/config-server.jar'
+    - ecommerce_backend/platform/config-server/target/config-server.jar
