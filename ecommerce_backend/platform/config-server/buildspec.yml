@@ -39,7 +39,6 @@ phases:
   build:
     commands:
       - echo "===== BUILD PHASE ====="
-      - cd ecommerce_backend/platform/config-server
       - echo "Building Docker image..."
       - docker build -t $REPOSITORY_URI:latest .
       - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
@@ -47,7 +46,6 @@ phases:
   post_build:
     commands:
       - echo "===== POST_BUILD PHASE ====="
-      - cd ecommerce_backend/platform/config-server
       - echo "Pushing Docker images..."
       - docker push $REPOSITORY_URI:latest
       - docker push $REPOSITORY_URI:$IMAGE_TAG
