@@ -3,8 +3,11 @@ version: 0.2
 phases:
   install:
     commands:
-      - echo "Installing Java 21..."
+       - echo "Installing Java 21..."
+      - yum remove -y java-17-amazon-corretto-headless || true
       - yum install -y java-21-amazon-corretto-devel
+      - export JAVA_HOME=/usr/lib/jvm/java-21-amazon-corretto
+      - export PATH=$JAVA_HOME/bin:$PATH
       - java -version
       - mvn -version
 
