@@ -3,6 +3,8 @@ version: 0.2
 phases:
   pre_build:
     commands:
+      - echo Entering config-server module
+      - cd platform/config-server
       - mvn clean install
       - echo Logging in to Amazon ECR...
       - aws --version
