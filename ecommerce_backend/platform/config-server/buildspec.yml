@@ -42,7 +42,6 @@ phases:
   build:
     commands:
       - echo "===== BUILD PHASE ====="
-      - cd ecommerce_backend/platform/config-server
       - echo "Building Docker image from:"
       - pwd
       - docker build -t $REPOSITORY_URI:latest .
@@ -52,7 +51,6 @@ phases:
     commands:
       - echo "===== POST_BUILD PHASE ====="
       - echo "Build completed on `date`"
-      - cd ecommerce_backend/platform/config-server
       - echo "Pushing Docker images..."
       - docker push $REPOSITORY_URI:latest
       - docker push $REPOSITORY_URI:$IMAGE_TAG
