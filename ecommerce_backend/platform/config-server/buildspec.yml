@@ -40,6 +40,7 @@ phases:
     commands:
       - echo "===== BUILD PHASE ====="
       - echo "Building Docker image..."
+      - ls -R
       - docker build -t $REPOSITORY_URI:latest .
       - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
 
