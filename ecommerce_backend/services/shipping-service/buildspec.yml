@@ -1,47 +1,63 @@
 version: 0.2
 
 env:
-  variables:
-    AWS_REGION: ap-south-1
-    SERVICE_NAME: shipping-service
+  shell: bash
 
 phases:
   install:
-    runtime-versions:
-      java: corretto21
-      docker: 20
     commands:
-      - echo "Installing dependencies for $SERVICE_NAME..."
-      - cd ecommerce_backend
-      - ./mvnw -v
+      - echo "===== INSTALL PHASE ====="
+      - echo "PWD (repo root) =>"
+      - pwd
+      - echo "Listing repo root =>"
+      - ls
+      - echo "Checking ecommerce_backend folder =>"
+      - ls ecommerce_backend
+      - echo "Installing Java 21..."
+      - yum remove -y java-17-amazon-corretto-headless || true
+      - yum install -y java-21-amazon-corretto-devel
+      - export JAVA_HOME=/usr/lib/jvm/java-21-amazon-corretto
+      - export PATH=$JAVA_HOME/bin:$PATH
+      - java -version
+      - mvn -version
 
   pre_build:
     commands:
+      - echo "===== PRE_BUILD PHASE ====="
+      - cd ecommerce_backend/platform/discovery-server
+      - echo "Now in:"
+      - pwd
+      - echo "Running Maven build..."
+      - mvn clean package -DskipTests
       - echo "Logging in to Amazon ECR..."
-      - ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-      - ECR_URI="$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
-      - REPO_NAME="ecommerce-${SERVICE_NAME}"
-      - IMAGE_TAG=${CODEBUILD_RESOLVED_SOURCE_VERSION:0:7}
-      - echo "Account: $ACCOUNT_ID"
-      - echo "Repo: $REPO_NAME"
-      - echo "Image tag: $IMAGE_TAG"
-      - aws ecr describe-repositories --repository-names "$REPO_NAME" >/dev/null 2>&1 || \
-          aws ecr create-repository --repository-name "$REPO_NAME" >/dev/null
-      - aws ecr get-login-password --region $AWS_REGION | \
-          docker login --username AWS --password-stdin $ECR_URI
-      - export ACCOUNT_ID ECR_URI REPO_NAME IMAGE_TAG
+      - aws --version
+      - REPOSITORY_URI=269825205626.dkr.ecr.ap-south-1.amazonaws.com/discovery_server
+      - aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin $REPOSITORY_URI
+      - IMAGE_TAG=build-$(echo $CODEBUILD_BUILD_ID | awk -F":" '{print $2}')
+      - export REPOSITORY_URI IMAGE_TAG
 
   build:
     commands:
-      - echo "Building JAR for $SERVICE_NAME..."
-      - cd ecommerce_backend
-      - ./mvnw clean package -pl services/${SERVICE_NAME} -am -DskipTests
-      - echo "Building Docker image for $SERVICE_NAME..."
-      - docker build -t $ECR_URI/$REPO_NAME:$IMAGE_TAG services/${SERVICE_NAME}
-      - echo "Pushing Docker image..."
-      - docker push $ECR_URI/$REPO_NAME:$IMAGE_TAG
+      - echo "===== BUILD PHASE ====="
+      - echo "Building Docker image..."
+      - ls -R
+      - docker build -t $REPOSITORY_URI:latest .
+      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
+
+  post_build:
+    commands:
+      - echo "===== POST_BUILD PHASE ====="
+      - echo "Pushing Docker images..."
+      - docker push $REPOSITORY_URI:latest
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - echo "Generating imagedefinitions.json..."
+      - DOCKER_CONTAINER_NAME=discovery_server
+      - printf '[{"name":"%s","imageUri":"%s"}]' "$DOCKER_CONTAINER_NAME" "$REPOSITORY_URI:$IMAGE_TAG" > imagedefinitions.json
+      - echo "imagedefinitions.json:"
+      - cat imagedefinitions.json
+      - cp imagedefinitions.json "$CODEBUILD_SRC_DIR"
 
 artifacts:
   files:
-    - 'ecommerce_backend/services/shipping-service/target/*.jar'
-  discard-paths: no
+    - imagedefinitions.json
+    - ecommerce_backend/platform/discovery-server/target/discovery-server.jar
