@@ -1,19 +1,11 @@
-# Build stage
-FROM maven:3.9.9-amazoncorretto-21 AS build
-WORKDIR /app
-
-COPY pom.xml .
-RUN mvn -B dependency:go-offline
-
-COPY src ./src
-RUN mvn -B package -DskipTests
-
-# Run stage
+# Simple runtime image with Java 21
 FROM amazoncorretto:21-alpine
+
 WORKDIR /app
 
-COPY --from=build /app/target/config-server.jar app.jar
+# JAR CodeBuild se aayega (target/config-server.jar)
+COPY target/config-server.jar app.jar
 
-EXPOSE 0
-ENTRYPOINT ["java","-jar","/app/app.jar"]
+EXPOSE 0   # jo bhi tumhara config server port hai
 
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
