@@ -22,38 +22,40 @@ phases:
       - mvn -version
 
   pre_build:
-  commands:
-    - echo "===== PRE_BUILD PHASE ====="
-    - cd ecommerce_backend/platform/config-server
-    - echo "Running Maven build..."
-    - mvn clean package -DskipTests
-    - echo "Logging in to Amazon ECR..."
-    - aws --version
-    - REPOSITORY_URI=269825205626.dkr.ecr.ap-south-1.amazonaws.com/configserver_app
-    - aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin $REPOSITORY_URI
-    - IMAGE_TAG=build-$(echo $CODEBUILD_BUILD_ID | awk -F":" '{print $2}')
-    - export REPOSITORY_URI IMAGE_TAG
+    commands:
+      - echo "===== PRE_BUILD PHASE ====="
+      - cd ecommerce_backend/platform/config-server
+      - echo "Now in:"
+      - pwd
+      - echo "Running Maven build..."
+      - mvn clean package -DskipTests
+      - echo "Logging in to Amazon ECR..."
+      - aws --version
+      - REPOSITORY_URI=269825205626.dkr.ecr.ap-south-1.amazonaws.com/configserver_app
+      - aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin $REPOSITORY_URI
+      - IMAGE_TAG=build-$(echo $CODEBUILD_BUILD_ID | awk -F":" '{print $2}')
+      - export REPOSITORY_URI IMAGE_TAG
 
- build:
-  commands:
-    - echo "===== BUILD PHASE ====="
-    - cd ecommerce_backend/platform/config-server
-    - echo "Building Docker image..."
-    - docker build -t $REPOSITORY_URI:latest .
-    - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
+  build:
+    commands:
+      - echo "===== BUILD PHASE ====="
+      - cd ecommerce_backend/platform/config-server
+      - echo "Building Docker image..."
+      - docker build -t $REPOSITORY_URI:latest .
+      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
 
   post_build:
     commands:
       - echo "===== POST_BUILD PHASE ====="
-      - echo "Build completed on `date`"
+      - cd ecommerce_backend/platform/config-server
       - echo "Pushing Docker images..."
       - docker push $REPOSITORY_URI:latest
       - docker push $REPOSITORY_URI:$IMAGE_TAG
       - echo "Generating imagedefinitions.json..."
       - DOCKER_CONTAINER_NAME=configserver_app
-      - printf '[{"name":"%s","imageUri":"%s"}]' $DOCKER_CONTAINER_NAME $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+      - printf '[{"name":"%s","imageUri":"%s"}]' "$DOCKER_CONTAINER_NAME" "$REPOSITORY_URI:$IMAGE_TAG" > imagedefinitions.json
+      - echo "imagedefinitions.json:"
       - cat imagedefinitions.json
-      # imagedefinitions ko repo root (CODEBUILD_SRC_DIR) me copy karo:
       - cp imagedefinitions.json "$CODEBUILD_SRC_DIR"
 
 artifacts:
