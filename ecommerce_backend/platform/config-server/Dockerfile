@@ -6,6 +6,6 @@ WORKDIR /app
 # JAR CodeBuild se aayega (target/config-server.jar)
 COPY target/config-server.jar app.jar
 
-EXPOSE 0   # jo bhi tumhara config server port hai
+EXPOSE 8888   # jo bhi tumhara config server port hai
 
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
