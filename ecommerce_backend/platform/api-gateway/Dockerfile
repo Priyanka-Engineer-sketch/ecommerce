@@ -8,6 +8,6 @@ COPY target/*.jar app.jar
 
 
 # Config server port
-EXPOSE 8888
+EXPOSE 8080
 
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
