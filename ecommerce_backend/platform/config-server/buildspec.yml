@@ -4,7 +4,7 @@ phases:
   pre_build:
     commands:
       - echo Entering config-server module
-      - cd platform/config-server
+      - cd ecommerce_backend/platform/config-server
       - mvn clean install
       - echo Logging in to Amazon ECR...
       - aws --version
