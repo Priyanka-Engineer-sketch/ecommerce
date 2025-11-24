@@ -1,11 +1,15 @@
 package com.ecomm.order.web;
 
-import com.ecomm.order.domain.OrderStatus;
+import com.ecomm.events.order.domain.OrderStatus;
 import com.ecomm.order.dto.CreateOrderRequest;
 import com.ecomm.order.dto.OrderResponse;
 import com.ecomm.order.dto.UpdateOrderRequest;
 import com.ecomm.order.dto.UpdateOrderStatusRequest;
 import com.ecomm.order.service.OrderApplicationService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -38,6 +42,16 @@ public class OrderController {
     // -------------------------------------------------------------------------
     // CREATE ORDER  (USER)
     // -------------------------------------------------------------------------
+    @Operation(
+            summary = "Create an order",
+            description = "Creates an order for the authenticated USER and starts the order saga.",
+            responses = {
+                    @ApiResponse(responseCode = "201", description = "Order created",
+                            content = @Content(schema = @Schema(implementation = OrderResponse.class))),
+                    @ApiResponse(responseCode = "400", description = "Invalid request"),
+                    @ApiResponse(responseCode = "401", description = "Unauthorized")
+            }
+    )
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('USER')")
@@ -51,6 +65,10 @@ public class OrderController {
     // -------------------------------------------------------------------------
     // GET ONE ORDER
     // -------------------------------------------------------------------------
+    @Operation(
+            summary = "Get order by externalOrderId",
+            description = "User can see only their own orders; ADMIN can see all."
+    )
     @GetMapping("/{externalOrderId}")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     public OrderResponse getOrder(@PathVariable String externalOrderId) {
@@ -74,6 +92,10 @@ public class OrderController {
     // -------------------------------------------------------------------------
     // LIST ORDERS
     // -------------------------------------------------------------------------
+    @Operation(
+            summary = "List orders",
+            description = "ADMIN can filter by customer and status; USER only sees their own orders."
+    )
     @GetMapping
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     public List<OrderResponse> listOrders(
@@ -94,6 +116,10 @@ public class OrderController {
     // -------------------------------------------------------------------------
     // UPDATE ORDER (items / address, etc.)
     // -------------------------------------------------------------------------
+    @Operation(
+            summary = "Update order details",
+            description = "Update shipping address and items. User restrictions & ADMIN rules apply."
+    )
     @PutMapping("/{externalOrderId}")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     public OrderResponse updateOrder(@PathVariable String externalOrderId,
@@ -113,6 +139,10 @@ public class OrderController {
     // -------------------------------------------------------------------------
     // UPDATE ORDER STATUS
     // -------------------------------------------------------------------------
+    @Operation(
+            summary = "Update order status",
+            description = "USER can only cancel their own order; ADMIN can move status along lifecycle."
+    )
     @PatchMapping("/{externalOrderId}/status")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     public OrderResponse updateOrderStatus(@PathVariable String externalOrderId,

@@ -2,22 +2,16 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
     <modelVersion>4.0.0</modelVersion>
 
-    <!-- Root coordinates -->
     <groupId>com.ecomm</groupId>
     <artifactId>ecommerce_backend</artifactId>
     <version>0.0.1-POC-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <name>ecommerce</name>
-    <dependencies>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-autoconfigure</artifactId>
-        </dependency>
-    </dependencies>
+    <name>ecommerce-backend</name>
 
-    <!-- ✅ Use Spring Boot 3.3.x (compatible with Spring Cloud 2023.0.x) -->
+    <!-- Spring Boot BOM -->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -26,16 +20,22 @@
     </parent>
 
     <properties>
-        <!-- Java version Boot 3.3.x supports 17 and 21 -->
         <java.version>21</java.version>
 
-        <!-- ✅ Spring Cloud release train compatible with Boot 3.2/3.3 -->
+        <!-- Spring Cloud (compatible with Boot 3.3.x) -->
         <spring-cloud.version>2023.0.3</spring-cloud.version>
+
+        <!-- Common versions -->
+        <springdoc.version>2.6.0</springdoc.version>
+        <lombok.version>1.18.42</lombok.version>
+        <bucket4j.version>8.15.0</bucket4j.version>
+        <nimbus-jose-jwt.version>9.37</nimbus-jose-jwt.version>
+        <jjwt.version>0.11.5</jjwt.version>
     </properties>
 
-    <!-- ✅ Import ONLY Spring Cloud BOM (Boot BOM comes from parent) -->
     <dependencyManagement>
         <dependencies>
+            <!-- Spring Cloud BOM -->
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-dependencies</artifactId>
@@ -43,37 +43,101 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+
+            <!-- SpringDoc -->
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+                <version>${springdoc.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webflux-ui</artifactId>
+                <version>${springdoc.version}</version>
+            </dependency>
+
+            <!-- Bucket4j -->
+            <dependency>
+                <groupId>com.bucket4j</groupId>
+                <artifactId>bucket4j_jdk17-core</artifactId>
+                <version>${bucket4j.version}</version>
+            </dependency>
+
+            <!-- JWT / JOSE -->
+            <dependency>
+                <groupId>com.nimbusds</groupId>
+                <artifactId>nimbus-jose-jwt</artifactId>
+                <version>${nimbus-jose-jwt.version}</version>
+            </dependency>
+
+            <!-- Lombok -->
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+            </dependency>
+
+            <!-- Internal shared modules (children can omit version) -->
+            <dependency>
+                <groupId>com.ecomm</groupId>
+                <artifactId>security-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ecomm</groupId>
+                <artifactId>saga-kafka-lib</artifactId>
+                <version>${project.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
     <modules>
-        <!-- add/keep all your modules here -->
+        <!-- services -->
+        <module>services/user-service</module>
+        <module>services/cart-service</module>
+        <module>services/order-service</module>
+        <module>services/inventory-service</module>
+        <module>services/payment-service</module>
+        <module>services/product-service</module>
+        <module>services/shipping-service</module>
+
+        <!-- platform -->
         <module>platform/api-gateway</module>
         <module>platform/config-server</module>
-        <module>common/security-common</module>
         <module>platform/discovery-server</module>
-        <module>services/user-service</module>
+
+        <!-- common libs -->
+        <module>common/security-common</module>
         <module>common/saga-kafka-lib</module>
+
+
     </modules>
 
     <build>
         <pluginManagement>
             <plugins>
-                <!-- Boot plugin uses the version from the parent -->
-                <plugin>
-                    <groupId>org.springframework.boot</groupId>
-                    <artifactId>spring-boot-maven-plugin</artifactId>
-                </plugin>
-
-                <!-- Java 21 compiler setup -->
+                <!-- Compiler plugin -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.11.0</version>
+                    <version>3.13.0</version>
                     <configuration>
                         <release>${java.version}</release>
                         <parameters>true</parameters>
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                                <version>${lombok.version}</version>
+                            </path>
+                        </annotationProcessorPaths>
                     </configuration>
+                </plugin>
+
+                <!-- Boot plugin -->
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
                 </plugin>
             </plugins>
         </pluginManagement>

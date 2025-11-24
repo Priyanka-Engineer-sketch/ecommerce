@@ -9,5 +9,6 @@ public record OrderItemPayload(
         String productId,
         String name,
         int quantity,
-        BigDecimal price
+        Double price,
+        String sku
 ) {}
