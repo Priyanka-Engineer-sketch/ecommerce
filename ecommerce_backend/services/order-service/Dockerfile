@@ -1,21 +1,13 @@
-# ---- BUILD STAGE ----
-FROM maven:3.9.6-eclipse-temurin-21 AS build
+# Simple runtime image with Java 21
+FROM amazoncorretto:21-alpine
+
 WORKDIR /app
 
-COPY pom.xml .
-RUN mvn -B dependency:go-offline
-
-COPY src ./src
-RUN mvn clean package -DskipTests
+# JAR CodeBuild se aayega (target/order-service.jar)
+COPY target/*.jar app.jar
 
 
-# ---- RUNTIME STAGE ----
-FROM eclipse-temurin:21-jre-alpine
-WORKDIR /app
+# Config server port
+EXPOSE 8084
 
-COPY --from=build /app/target/*.jar app.jar
-
-
-EXPOSE 0
-
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
