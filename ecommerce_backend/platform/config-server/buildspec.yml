@@ -25,6 +25,8 @@ phases:
       - echo "Running Maven build in:"
       - pwd
       - ls
+      - java -version
+      - mvn -version
       - mvn clean install
       - echo "Logging in to Amazon ECR..."
       - aws --version
