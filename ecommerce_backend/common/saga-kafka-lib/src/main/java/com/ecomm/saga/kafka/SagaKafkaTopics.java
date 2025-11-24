@@ -32,4 +32,6 @@ public final class SagaKafkaTopics {
     public static final String USER_EMAIL_OUTBOX         = "user.email.outbox.v1";
 
     public static final String USER_FRAUD_ALERT          = "user.fraud.alert";
+
+    public static final String ORDER_SAGA_COMMAND_PAYMENT =  "order.saga.commands.payment.v1";
 }

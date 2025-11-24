@@ -2,8 +2,8 @@ package com.ecomm.order.saga;
 
 import com.ecomm.events.order.OrderItemPayload;
 import com.ecomm.events.order.OrderSagaStartEvent;
-import com.ecomm.order.domain.Order;
-import com.ecomm.order.domain.OrderItem;
+import com.ecomm.events.order.domain.Order;
+import com.ecomm.events.order.domain.OrderItem;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -34,7 +34,8 @@ public class OrderSagaMapper {
                 item.getProductId(),
                 item.getProductName(),
                 item.getQuantity(),
-                BigDecimal.valueOf(item.getPrice())
+                item.getPrice(),
+                item.getOrder().getId() + "_" + item.getProductName()
         );
     }
 

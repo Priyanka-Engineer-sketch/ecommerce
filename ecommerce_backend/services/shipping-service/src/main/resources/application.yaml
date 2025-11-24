@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: shipping-service
+
+  profiles:
+    active: dev
+
+  config:
+    import: "optional:configserver:http://localhost:8888/shipping-service/dev"

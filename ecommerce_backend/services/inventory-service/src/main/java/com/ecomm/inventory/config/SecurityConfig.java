@@ -1,6 +1,5 @@
 package com.ecomm.inventory.config;
 
-import com.ecomm.config.security.JwtAuthFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;

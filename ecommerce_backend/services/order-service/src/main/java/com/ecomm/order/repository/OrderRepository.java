@@ -1,7 +1,7 @@
 package com.ecomm.order.repository;
 
-import com.ecomm.order.domain.Order;
-import com.ecomm.order.domain.OrderStatus;
+import com.ecomm.events.order.domain.Order;
+import com.ecomm.events.order.domain.OrderStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

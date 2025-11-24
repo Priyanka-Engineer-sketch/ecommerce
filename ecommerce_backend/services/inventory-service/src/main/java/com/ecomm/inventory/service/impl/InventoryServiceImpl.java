@@ -1,5 +1,6 @@
 package com.ecomm.inventory.service.impl;
 
+import com.ecomm.events.order.OrderItemPayload;
 import com.ecomm.inventory.domain.InventoryItem;
 import com.ecomm.inventory.dto.request.InventoryAdjustmentRequest;
 import com.ecomm.inventory.dto.response.InventoryResponse;
@@ -15,7 +16,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @Service
@@ -61,26 +61,21 @@ public class InventoryServiceImpl implements InventoryService {
         return response;
     }
 
-    // WebSocket notification using CompletableFuture/@Async style
+    // WebSocket notification using @Async
     @Async
     protected void notifyAsync(InventoryResponse response) {
         updatePublisher.publishUpdate(response);
     }
 
-    // ----------------- SAGA: RESERVE STOCK --- (called by Kafka handler) ----
+    // ----------------- SAGA: RESERVE STOCK (called by Kafka handler) ----
     @Override
     @Transactional
-    public boolean reserveForOrder(Long orderId, Object payload) {
+    public boolean reserveForOrder(Long orderId, List<OrderItemPayload> payload) {
         try {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> map = (Map<String, Object>) payload;
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> items = (List<Map<String, Object>>) map.get("items");
-
-            // Validation pass
-            for (Map<String, Object> line : items) {
-                String sku = (String) line.get("sku");
-                int qty = ((Number) line.get("quantity")).intValue();
+            // 1) Validation pass
+            for (OrderItemPayload line : payload) {
+                String sku = line.sku();        // adjust getter name if different
+                int qty = line.quantity();      // adjust getter name if different
 
                 InventoryItem item = repo.findBySku(sku)
                         .orElseThrow(() -> new RuntimeException("Unknown SKU: " + sku));
@@ -91,10 +86,10 @@ public class InventoryServiceImpl implements InventoryService {
                 }
             }
 
-            // Reserve pass
-            for (Map<String, Object> line : items) {
-                String sku = (String) line.get("sku");
-                int qty = ((Number) line.get("quantity")).intValue();
+            // 2) Reserve pass
+            for (OrderItemPayload line : payload) {
+                String sku = line.sku();
+                int qty = line.quantity();
 
                 InventoryItem item = repo.findBySku(sku).orElseThrow();
                 item.setAvailable(item.getAvailable() - qty);
@@ -110,16 +105,16 @@ public class InventoryServiceImpl implements InventoryService {
             return true;
 
         } catch (Exception e) {
-            log.error("Error reserving stock for order {}: {}", orderId, e.getMessage());
+            log.error("Error reserving stock for order {}: {}", orderId, e.getMessage(), e);
             return false;
         }
     }
 
-    // For compensation
+    // ----------------- SAGA: RELEASE STOCK (compensation) ---------------
     @Override
     @Transactional
     public void releaseForOrder(Long orderId) {
-        log.info("Releasing stock for order {} (compensation TODO: implement with audit)", orderId);
-        // TODO: Track order-item reservations to reverse them here
+        // NOTE: This is a placeholder; proper implementation requires tracking per-order reservations.
+        log.info("Releasing stock for order {} (compensation TODO: implement with audit/reservation table)", orderId);
     }
 }

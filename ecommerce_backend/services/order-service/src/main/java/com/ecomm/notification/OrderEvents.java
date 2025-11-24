@@ -1,6 +1,7 @@
 package com.ecomm.notification;
 
-import com.ecomm.order.domain.OrderStatus;
+import com.ecomm.events.order.domain.OrderStatus;
+import com.ecomm.events.payment.PaymentMethod;
 
 import java.time.Instant;
 
@@ -14,7 +15,8 @@ public class OrderEvents {
             String customerEmail,
             double totalAmount,
             OrderStatus status,
-            Instant createdAt
+            Instant createdAt,
+            PaymentMethod paymentMethod
     ) {
     }
 
